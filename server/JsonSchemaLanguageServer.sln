@@ -1,0 +1,36 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.31729.503
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "JsonSchemaLanguageServer", "src\JsonSchemaLanguageServer\JsonSchemaLanguageServer.csproj", "{2F68B3E6-0ECA-495B-AE4B-B68E8684FF4D}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "JsonSchemaLanguageServerUnitTests", "test\JsonSchemaLanguageServerUnitTests\JsonSchemaLanguageServerUnitTests.csproj", "{DA033F14-FB01-4D7C-A260-7011D12EB418}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{EF37EA6E-3E7B-4D37-876A-6A02FFF24364}"
+	ProjectSection(SolutionItems) = preProject
+		..\.editorconfig = ..\.editorconfig
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{2F68B3E6-0ECA-495B-AE4B-B68E8684FF4D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2F68B3E6-0ECA-495B-AE4B-B68E8684FF4D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2F68B3E6-0ECA-495B-AE4B-B68E8684FF4D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2F68B3E6-0ECA-495B-AE4B-B68E8684FF4D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DA033F14-FB01-4D7C-A260-7011D12EB418}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DA033F14-FB01-4D7C-A260-7011D12EB418}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DA033F14-FB01-4D7C-A260-7011D12EB418}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DA033F14-FB01-4D7C-A260-7011D12EB418}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {B045528F-A939-445C-AB77-BBF80F0E68C4}
+	EndGlobalSection
+EndGlobal

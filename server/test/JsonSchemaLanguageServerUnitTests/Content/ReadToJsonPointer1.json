@@ -1,0 +1,32 @@
+{
+  "stringProperty": "string",
+  "numberProperty": 123,
+  "arrayProperty": [ 1, 2, 3 ],
+  "objectProperty": {
+    "stringProperty": "string",
+    "numberProperty": 123,
+    "arrayProperty": [ 1, 2, 3 ]
+  },
+  "nestedObjectProperty": {
+    "objectProperty": {
+      "stringProperty": "string",
+      "numberProperty": 123,
+      "arrayProperty": [ 1, 2, 3 ]
+    }
+  },
+  "nestedArrayProperty": [
+    [ 1, 2, 3 ],
+    [ 4, 5, 6 ],
+    [ 7, 8, 9 ]
+  ],
+  "arrayInObjectProperty": {
+    "array1": [ 1, 2, 3 ],
+    "array2": [ 4, 5, 6 ]
+  },
+  "arrayInObjectPropertyArray": {
+    "outerArray": [
+      { "array1": [ 1, 2, 3 ] },
+      { "array2": [ 4, 5, 6 ] }
+    ]
+  }
+}

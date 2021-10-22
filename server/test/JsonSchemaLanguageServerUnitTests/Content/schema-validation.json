@@ -1,0 +1,25 @@
+{
+  "tests": [
+    {
+      "name": "invalid-type",
+      "expectedDiagnostics": [
+        {
+          "range": {
+            "start": { "line": 7, "character": 14 },
+            "end": { "line": 7, "character": 32 }
+          },
+          "severity": "error",
+          "message": "Expected value to match one of the values specified by the enum"
+        },
+        {
+          "range": {
+            "start": { "line": 7, "character": 14 },
+            "end": { "line": 7, "character": 32 }
+          },
+          "severity": "error",
+          "message": "Value is string but should be array"
+        }
+      ]
+    }
+  ]
+}

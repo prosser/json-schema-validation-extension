@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema#",
+  "$id": "https://product-ingestion.azureedge.net/schema/customer-leads/2021-12-01-dev",
+  "title": "Invalid type",
+  "type": "object",
+  "properties": {
+    "foo": {
+      "type": "not-a-valid-type"
+    }
+  }
+}

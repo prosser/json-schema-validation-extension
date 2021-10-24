@@ -1,10 +1,12 @@
 // <copyright file="LogFileLogger.cs">Copyright (c) Peter Rosser.</copyright>
 
-namespace Rosser.Extensions.JsonSchemaLanguageServer
+namespace Rosser.Extensions.JsonSchemaLanguageServer.Logging
 {
     using System;
 
     using Microsoft.Extensions.Logging;
+
+    using Rosser.Extensions.JsonSchemaLanguageServer.Services;
 
     internal class LogFileLogger : ILogger
     {

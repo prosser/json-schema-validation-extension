@@ -6,6 +6,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { workspace } from 'vscode';
 import {
+  DidChangeConfigurationParams,
   Executable,
   LanguageClient,
   LanguageClientOptions,
@@ -38,7 +39,7 @@ export function activate(context: vscode.ExtensionContext) {
   };
   const debug: Executable = {
     ...run,
-    args: ['--debug']
+    args: ['--debug', '--launchDebugger']
   };
   console.log(serverModule);
 
@@ -66,6 +67,23 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Start the client. This will also launch the server
   client.start();
+  client.onReady().then(() => {
+    sendConfig();
+  });
+
+  workspace.onDidChangeConfiguration(e => {
+    if (e.affectsConfiguration('jsonSchemaDiagnostics')) {
+      sendConfig();
+    }
+  });
+}
+
+function sendConfig() {
+  const config = workspace.getConfiguration('jsonSchemaDiagnostics');
+  const n: DidChangeConfigurationParams = {
+    settings: config
+  };
+  client.sendNotification("workspace/didChangeConfiguration", n);
 }
 
 export function deactivate(): Thenable<void> | undefined {

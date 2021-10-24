@@ -4,6 +4,7 @@ namespace Rosser.Extensions.JsonSchemaLanguageServer
 {
     using System;
     using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
     using System.IO;
     using System.Text.Json;
     using System.Threading.Tasks;
@@ -47,7 +48,7 @@ namespace Rosser.Extensions.JsonSchemaLanguageServer
             return value;
         }
 
-        public static bool TryGetPropertyValue(this JsonElement element, string propertyName, out string? value)
+        public static bool TryGetPropertyValue(this JsonElement element, string propertyName, [NotNullWhen(true)] out string? value)
         {
             if (element.ValueKind != JsonValueKind.Object)
             {
@@ -61,7 +62,7 @@ namespace Rosser.Extensions.JsonSchemaLanguageServer
                 return false;
             }
 
-            value = idValue.GetString();
+            value = idValue.GetString()!;
             return true;
         }
 

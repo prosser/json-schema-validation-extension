@@ -1,9 +1,13 @@
 {
-  "name": "json-schema-2020-validation",
-  "displayName": "JSON Schema (2020) Validation",
-  "description": "Validates JSON schemas (draft 2020-12) and JSON documents against schemas using the ajv library.",
-  "version": "0.0.1",
+  "name": "json-schema-diagnostics",
+  "displayName": "JSON Schema Diagnostics",
+  "description": "Validates JSON documents against schemas (draft 2020-12 and later) with live diagnostics in VS Code",
+  "version": "0.0.2",
   "publisher": "prosser",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/prosser/json-schema-validation-extension.git"
+  },
   "engines": {
     "vscode": "^1.61.0"
   },
@@ -13,47 +17,62 @@
   "activationEvents": [
     "onLanguage:json"
   ],
-  "main": "./client/out/extension",
+  "main": "./out/extension",
   "contributes": {
     "configuration": {
       "type": "object",
-      "title": "JSON Schema 2020 Validation Configuration",
+      "title": "JSON Schema Diagnostics",
       "properties": {
-        "jsonSchema2020Validation.maxNumberOfProblems": {
+        "jsonSchemaDiagnostics.maxNumberOfProblems": {
           "scope": "resource",
           "type": "number",
           "default": 100,
           "description": "Controls the maximum number of problems produced by the server."
         },
-        "jsonSchema2020Validation.trace.server": {
-          "scope": "window",
+        "jsonSchemaDiagnostics.schemaSearchPaths": {
+          "scope": "resource",
           "type": "string",
-          "enum": [
-            "off",
-            "messages",
-            "verbose"
-          ],
-          "default": "off",
-          "description": "Traces the communication between VS Code and the language server."
+          "description": "Comma-delimited absolute paths to search for schema files before attempting to download the schema."
+        },
+        "jsonSchemaDiagnostics.schemaSearchUrlPattern": {
+          "scope": "resource",
+          "type": "string",
+          "description": "Regex pattern executed against $schema URLs to determine the local filename.",
+          "default": "^https?://.+/(.+)(?:#?\\?.+)?$"
+        },
+        "jsonSchemaDiagnostics.schemaSearchGlobs": {
+          "scope": "resource",
+          "type": "string",
+          "description": "Comma-delimited list of path globs to search for schema files before attempting an HTTP fetch. Matches from jsonSchema2020Validation.schemaUrlPattern will replace $1, $2, etc.",
+          "default": "**/$1.json"
         }
       }
     }
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile",
-    "compile": "tsc -b",
+    "vscode:prepublish": "npm run esbuild-base -- --minify && npm run server-win && npm run server-osx && npm run server-linux",
+    "server-win": "cd server/src/JsonSchemaLanguageServer && dotnet publish /p:PublishProfile=win-x64.pubxml",
+    "server-osx": "cd server/src/JsonSchemaLanguageServer && dotnet publish /p:PublishProfile=osx-x64.pubxml",
+    "server-linux": "cd server/src/JsonSchemaLanguageServer && dotnet publish /p:PublishProfile=linux-x64.pubxml",
+    "esbuild-base": "esbuild ./src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node",
+    "esbuild": "npm run esbuild-base -- --sourcemap",
     "watch": "tsc -b -w",
-    "lint": "eslint ./client/src --ext .ts,.tsx",
-    "postinstall": "cd client && npm install && cd ..",
+    "lint": "eslint ./src --ext .ts,.tsx",
     "test": "node ./out/test/runTest.js"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^7.0.0"
   },
   "devDependencies": {
     "@types/mocha": "^9.0.0",
     "@types/node": "14.x",
+    "@types/vscode": "^1.61.0",
     "@typescript-eslint/eslint-plugin": "^4.31.1",
     "@typescript-eslint/parser": "^4.31.1",
+    "@vscode/test-electron": "^1.6.1",
+    "esbuild": "^0.13.8",
     "eslint": "^7.32.0",
     "mocha": "^9.1.1",
-    "typescript": "^4.4.3"
+    "typescript": "^4.4.4"
   }
 }

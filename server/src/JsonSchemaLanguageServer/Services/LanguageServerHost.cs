@@ -1,6 +1,6 @@
 // <copyright file="LanguageServerHost.cs">Copyright (c) Peter Rosser.</copyright>
 
-namespace Rosser.Extensions.JsonSchemaLanguageServer
+namespace Rosser.Extensions.JsonSchemaLanguageServer.Services
 {
     using System;
     using System.IO;
@@ -15,7 +15,7 @@ namespace Rosser.Extensions.JsonSchemaLanguageServer
     {
         private readonly ILogger<LanguageServerHost> logger;
         private readonly IServiceProvider serviceProvider;
-        private Server? languageServer;
+        private LanguageServer? languageServer;
         private bool isDisposed;
 
         private readonly Stream cin;
@@ -37,12 +37,12 @@ namespace Rosser.Extensions.JsonSchemaLanguageServer
 
         public MessageType MessageType { get; set; }
 
-        private Server Server => this.languageServer ?? throw new InvalidOperationException("Not initialized");
+        private LanguageServer Server => this.languageServer ?? throw new InvalidOperationException("Not initialized");
 
         public async Task InitializeAsync(CancellationToken ct)
         {
             this.logger.LogInformation("Initializing JSON Schema Language Server");
-            this.languageServer = this.serviceProvider.GetRequiredService<Server>();
+            this.languageServer = this.serviceProvider.GetRequiredService<LanguageServer>();
 
             this.Server.Disconnected += this.OnDisconnected;
 

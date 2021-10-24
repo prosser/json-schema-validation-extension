@@ -10,37 +10,22 @@ namespace JsonSchemaLanguageServerUnitTests
     using System.Text.Json.Serialization;
     using System.Threading.Tasks;
 
+    using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Logging;
     using Microsoft.VisualStudio.LanguageServer.Protocol;
 
     using Moq;
 
-    using Rosser.Extensions.JsonSchemaLanguageServer;
+    using Rosser.Extensions.JsonSchemaLanguageServer.Services;
 
     using Xunit;
     using Xunit.Abstractions;
 
-    public class SchemaAnalyzerTests
+    public class SchemaAnalyzerTests : TestBase
     {
-        private readonly ITestOutputHelper output;
-        private readonly ILogger<Server> logger;
-
         public SchemaAnalyzerTests(ITestOutputHelper output)
+            : base(output)
         {
-            this.output = output;
-            var loggerMock = new Mock<ILogger<Server>>();
-            loggerMock.Setup(x => x.Log(
-                It.IsAny<LogLevel>(),
-                It.IsAny<EventId>(),
-                It.IsAny<It.IsAnyType>(),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception, string>>()))
-                .Callback(new InvocationAction(action =>
-                {
-                    this.output.WriteLine($"{action.Arguments[0]} {action.Arguments[2]?.ToString()}");
-                }));
-
-            this.logger = loggerMock.Object;
         }
 
         [Theory]
@@ -48,7 +33,7 @@ namespace JsonSchemaLanguageServerUnitTests
         public async Task TestValidationAsync(TestData data)
         {
             Assert.NotNull(data);
-            SchemaAnalyzer analyzer = new();
+            using var analyzer = this.serviceProvider.GetRequiredService<SchemaAnalyzer>();
             await analyzer.InitializeAsync();
             List<Diagnostic> diagnostics = analyzer.Analyze(data.SchemaJson);
 
@@ -103,5 +88,4 @@ namespace JsonSchemaLanguageServerUnitTests
             }
         }
     }
-
 }

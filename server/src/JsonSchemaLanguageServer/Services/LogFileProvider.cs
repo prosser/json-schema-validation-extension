@@ -1,6 +1,6 @@
 // <copyright file="LogFileProvider.cs">Copyright (c) Peter Rosser.</copyright>
 
-namespace Rosser.Extensions.JsonSchemaLanguageServer
+namespace Rosser.Extensions.JsonSchemaLanguageServer.Services
 {
     using System;
     using System.Collections.Concurrent;
@@ -10,7 +10,9 @@ namespace Rosser.Extensions.JsonSchemaLanguageServer
 
     using Microsoft.Extensions.Logging;
 
-    public class LogFileProvider : Microsoft.Extensions.Logging.ILoggerProvider
+    using Rosser.Extensions.JsonSchemaLanguageServer.Logging;
+
+    public class LogFileProvider : ILoggerProvider
     {
         private bool isDisposed;
         private readonly Stream stream;

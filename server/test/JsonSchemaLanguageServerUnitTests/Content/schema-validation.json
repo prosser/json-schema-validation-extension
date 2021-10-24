@@ -1,6 +1,10 @@
 {
   "tests": [
     {
+      "name": "no-schema",
+      "expectedDiagnostics": []
+    },
+    {
       "name": "invalid-type",
       "expectedDiagnostics": [
         {

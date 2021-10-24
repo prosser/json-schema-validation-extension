@@ -45,11 +45,5 @@ Supports VS Code running on Windows x64, Linux x64, and OSX.
 
 ## Release Notes
 
-### 0.0.2
-
-* Added local schema substitution.
-* Fixed several crashing bugs.
-
-### 0.0.1
-
-Initial preview release. There be dragons.
+- Added local schema substitution.
+- Fixed several crashing bugs.

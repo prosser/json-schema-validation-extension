@@ -2,12 +2,13 @@
   "name": "json-schema-2020-validation",
   "displayName": "JSON Schema Diagnostics",
   "description": "Validates JSON documents against schemas (draft 2020-12 and later) with live diagnostics in VS Code",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "publisher": "prosser",
   "repository": {
     "type": "git",
     "url": "https://github.com/prosser/json-schema-validation-extension.git"
   },
+  "icon": "icon.png",
   "engines": {
     "vscode": "^1.61.0"
   },

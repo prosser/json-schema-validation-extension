@@ -2,7 +2,7 @@
   "name": "json-schema-2020-validation",
   "displayName": "JSON Schema Diagnostics",
   "description": "Validates JSON documents against schemas (up to draft/2020-12) with live diagnostics in VS Code",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "publisher": "prosser",
   "repository": {
     "type": "git",

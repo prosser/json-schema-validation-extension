@@ -55,6 +55,15 @@ namespace Rosser.Extensions.JsonSchemaLanguageServer
             return result;
         }
 
+        [JsonRpcMethod(Methods.InitializedName)]
+        public void OnInitialized(JToken arg)
+        {
+            // The InitializedParams object is empty in the LSP spec, so we don't need to convert the arg
+            // This method signals that the client and server have finished their handshake
+            // Trigger the Initialized event if not already triggered in Initialize
+            Initialized?.Invoke(this, new EventArgs());
+        }
+
         [JsonRpcMethod(Methods.TextDocumentDidOpenName)]
         public void OnTextDocumentOpened(JToken arg)
         {

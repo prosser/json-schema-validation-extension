@@ -45,5 +45,11 @@ Supports VS Code running on Windows x64, Linux x64, and OSX.
 
 ## Release Notes
 
+0.0.8:
+- Updated to .NET 8.0 (LTS)
+- Upgraded all the packages! Man, it's been awhile.
+- Fix for language server issue that would cause things to break in modern VS Code.
+
+0.0.5:
 - Added local schema substitution.
 - Fixed several crashing bugs.

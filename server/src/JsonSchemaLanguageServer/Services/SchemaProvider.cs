@@ -1,117 +1,115 @@
 // <copyright file="SchemaProvider.cs">Copyright (c) Peter Rosser.</copyright>
 
-namespace Rosser.Extensions.JsonSchemaLanguageServer.Services
+namespace Rosser.Extensions.JsonSchemaLanguageServer.Services;
+
+using System;
+using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
+
+using Json.Schema;
+
+using Microsoft.VisualStudio.Threading;
+
+public class SchemaProvider : IDisposable
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Diagnostics.CodeAnalysis;
-    using System.Net.Http;
-    using System.Threading;
-    using System.Threading.Tasks;
+    private readonly JoinableTaskContext syncTaskContext;
+    private readonly HttpClient? httpClient;
+    private bool isDisposed;
+    internal const string Schema2020Url = @"https://json-schema.org/draft/2020-12/schema";
 
-    using Json.Schema;
-
-    using Microsoft.VisualStudio.Threading;
-
-    public class SchemaProvider : IDisposable
+    public SchemaProvider(HttpMessageHandler messageHandler)
     {
-        private readonly JoinableTaskContext syncTaskContext;
-        private readonly HttpClient? httpClient;
-        private bool isDisposed;
-        private Dictionary<string, JsonSchema> schemaCache = new(StringComparer.OrdinalIgnoreCase);
+        this.syncTaskContext = new JoinableTaskContext();
+        this.httpClient = new HttpClient(messageHandler);
+    }
 
-        internal const string Schema2020Url = @"https://json-schema.org/draft/2020-12/schema";
+    private HttpClient HttpClient => this.httpClient ?? throw new InvalidOperationException("Not initialized");
+    public Dictionary<string, JsonSchema> SchemaCache { get; } = new(StringComparer.OrdinalIgnoreCase);
 
-        public SchemaProvider(HttpMessageHandler messageHandler)
+    public void Dispose()
+    {
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        this.Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
+
+    public async Task InitializeAsync(CancellationToken ct = default)
+    {
+        JsonSchema? schema2020 = await this.DownloadSchemaAsync(Schema2020Url, ct)
+            ?? throw new InvalidOperationException($"Could not retrieve {Schema2020Url}");
+
+        this.SchemaCache.Add(Schema2020Url, schema2020);
+    }
+
+    public bool TryGetSchema(string url, [NotNullWhen(true)] out JsonSchema? schema)
+    {
+        if (this.SchemaCache.TryGetValue(url, out schema))
         {
-            this.syncTaskContext = new JoinableTaskContext();
-            this.httpClient = new HttpClient(messageHandler);
+            return true;
         }
 
-        private HttpClient HttpClient => this.httpClient ?? throw new InvalidOperationException("Not initialized");
-        public Dictionary<string, JsonSchema> SchemaCache => this.schemaCache;
-
-        public void Dispose()
-        {
-            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-            this.Dispose(disposing: true);
-            GC.SuppressFinalize(this);
-        }
-
-        public async Task InitializeAsync(CancellationToken ct = default)
-        {
-            JsonSchema? schema2020 = await this.DownloadSchemaAsync(Schema2020Url, ct)
-                ?? throw new InvalidOperationException($"Could not retrieve {Schema2020Url}");
-
-            this.schemaCache.Add(Schema2020Url, schema2020);
-        }
-
-        public bool TryGetSchema(string url, [NotNullWhen(true)] out JsonSchema? schema)
-        {
-            if (this.schemaCache.TryGetValue(url, out schema))
-            {
-                return true;
-            }
-
-            JsonSchema? downloaded = null;
-            using var downloadDone = new AutoResetEvent(false);
-            ThreadPool.QueueUserWorkItem((_) =>
-            {
-                try
-                {
-                    var taskFactory = this.syncTaskContext.CreateFactory(this.syncTaskContext.CreateCollection());
-
-                    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-                    downloaded = taskFactory.Run(async () => await this.DownloadSchemaAsync(url, cts.Token));
-                }
-                finally
-                {
-                    downloadDone.Set();
-                }
-            });
-
-            downloadDone.WaitOne();
-            schema = downloaded;
-
-            if (schema is not null)
-            {
-                this.schemaCache.Add(url, schema);
-                return true;
-            }
-            return false;
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!this.isDisposed)
-            {
-                if (disposing)
-                {
-                    this.httpClient?.Dispose();
-                }
-
-                this.isDisposed = true;
-            }
-        }
-
-        private async Task<JsonSchema?> DownloadSchemaAsync(string url, CancellationToken ct)
+        JsonSchema? downloaded = null;
+        using var downloadDone = new AutoResetEvent(false);
+        _ = ThreadPool.QueueUserWorkItem((_) =>
         {
             try
             {
-                HttpResponseMessage response = await this.HttpClient.GetAsync(url, ct);
+                JoinableTaskFactory taskFactory = this.syncTaskContext.CreateFactory(this.syncTaskContext.CreateCollection());
 
-                JsonSchema? downloaded = null;
-                if (response.IsSuccessStatusCode)
-                {
-                    downloaded = await JsonSchema.FromStream(await response.Content.ReadAsStreamAsync(ct));
-                }
-                return downloaded;
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+                downloaded = taskFactory.Run(async () => await this.DownloadSchemaAsync(url, cts.Token));
             }
-            catch (Exception)
+            finally
             {
-                return null;
+                _ = downloadDone.Set();
             }
+        });
+
+        _ = downloadDone.WaitOne();
+        schema = downloaded;
+
+        if (schema is not null)
+        {
+            this.SchemaCache.Add(url, schema);
+            return true;
         }
 
+        return false;
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!this.isDisposed)
+        {
+            if (disposing)
+            {
+                this.httpClient?.Dispose();
+            }
+
+            this.isDisposed = true;
+        }
+    }
+
+    private async Task<JsonSchema?> DownloadSchemaAsync(string url, CancellationToken ct)
+    {
+        try
+        {
+            HttpResponseMessage response = await this.HttpClient.GetAsync(url, ct);
+
+            JsonSchema? downloaded = null;
+            if (response.IsSuccessStatusCode)
+            {
+                downloaded = await JsonSchema.FromStream(await response.Content.ReadAsStreamAsync(ct));
+            }
+
+            return downloaded;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
     }
 }

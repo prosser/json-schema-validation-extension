@@ -1,152 +1,147 @@
 // <copyright file="SchemaAnalyzer.cs">Copyright (c) Peter Rosser.</copyright>
 
-namespace Rosser.Extensions.JsonSchemaLanguageServer.Services
+namespace Rosser.Extensions.JsonSchemaLanguageServer.Services;
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
+
+using Json.Schema;
+
+using Microsoft.VisualStudio.LanguageServer.Protocol;
+
+public class SchemaAnalyzer : IDisposable
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Linq;
-    using System.Text.Json;
-    using System.Threading;
-    using System.Threading.Tasks;
+    private readonly SchemaProvider schemaProvider;
+    private bool isDisposed;
 
-    using Json.Schema;
-
-    using Microsoft.VisualStudio.LanguageServer.Protocol;
-
-    public class SchemaAnalyzer : IDisposable
+    public SchemaAnalyzer(SchemaProvider schemaProvider)
     {
-        private readonly SchemaProvider schemaProvider;
-        private bool isDisposed;
+        this.schemaProvider = schemaProvider;
+    }
 
-        public SchemaAnalyzer(SchemaProvider schemaProvider)
+    public void Dispose()
+    {
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        this.Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
+
+    public async Task InitializeAsync(CancellationToken ct = default) => await this.schemaProvider.InitializeAsync(ct);
+
+    public List<Diagnostic> Analyze(string text)
+    {
+        List<Diagnostic> diagnostics = [];
+
+        JsonDocument? doc;
+
+        try
         {
-            this.schemaProvider = schemaProvider;
-        }
-
-        public void Dispose()
-        {
-            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-            this.Dispose(disposing: true);
-            GC.SuppressFinalize(this);
-        }
-
-        public async Task InitializeAsync(CancellationToken ct = default)
-        {
-            await this.schemaProvider.InitializeAsync(ct);
-        }
-
-        public List<Diagnostic> Analyze(string text)
-        {
-            List<Diagnostic> diagnostics = new();
-
-            JsonDocument? doc;
-
-            try
+            doc = JsonDocument.Parse(text);
+            JsonElement root = doc.RootElement;
+            if (root.TryGetPropertyValue("$schema", out string? schemaUrl))
             {
-                doc = JsonDocument.Parse(text);
-                JsonElement root = doc.RootElement;
-                if (root.TryGetPropertyValue("$schema", out string? schemaUrl))
+                if (!this.schemaProvider.TryGetSchema(schemaUrl, out JsonSchema? schema))
                 {
-                    if (!this.schemaProvider.TryGetSchema(schemaUrl, out JsonSchema? schema))
+                    diagnostics.Add(new Diagnostic
                     {
-                        diagnostics.Add(new Diagnostic
-                        {
-                            Code = DiagnosticCodes.CouldNotResolveSchema,
-                        });
-                    }
-                    else
+                        Code = DiagnosticCodes.CouldNotResolveSchema,
+                    });
+                }
+                else
+                {
+                    ValidationResults validationResults = schema.Validate(root, new ValidationOptions { OutputFormat = OutputFormat.Detailed });
+                    if (!validationResults.IsValid)
                     {
-                        ValidationResults validationResults = schema.Validate(root, new ValidationOptions { OutputFormat = OutputFormat.Detailed });
-                        if (!validationResults.IsValid)
-                        {
-                            TextLineMetrics[] metrics = TextHelper.CreateTextLineMetrics(text);
+                        TextLineMetrics[] metrics = TextHelper.CreateTextLineMetrics(text);
 
-                            foreach (ValidationResults leaf in GetLeafNodeResults(validationResults))
+                        foreach (ValidationResults leaf in GetLeafNodeResults(validationResults))
+                        {
+                            long start = 0;
+                            long end = 0;
+                            try
                             {
-                                long start = 0;
-                                long end = 0;
-                                try
+                                (start, end) = JsonHelper.GetElementBounds(text, leaf.InstanceLocation);
+
+                                TextLineMetrics startMetrics = metrics.FindLineAtByteOffset((int)start);
+                                TextLineMetrics endMetrics = metrics.FindLineAtByteOffset((int)end);
+
+                                int startCharOffset = startMetrics.GetCharOffset((int)start);
+                                int endCharOffset = endMetrics.GetCharOffset((int)end);
+
+                                var d = new Diagnostic
                                 {
-                                    (start, end) = JsonHelper.GetElementBounds(text, leaf.InstanceLocation);
-
-                                    TextLineMetrics startMetrics = metrics.FindLineAtByteOffset((int)start);
-                                    TextLineMetrics endMetrics = metrics.FindLineAtByteOffset((int)end);
-
-                                    int startCharOffset = startMetrics.GetCharOffset((int)start);
-                                    int endCharOffset = endMetrics.GetCharOffset((int)end);
-
-                                    var d = new Diagnostic
+                                    Code = DiagnosticCodes.ValidationError,
+                                    Severity = DiagnosticSeverity.Error,
+                                    Message = leaf.Message ?? "Schema validation failure",
+                                    Range = new()
                                     {
-                                        Code = DiagnosticCodes.ValidationError,
-                                        Severity = DiagnosticSeverity.Error,
-                                        Message = leaf.Message ?? "Schema validation failure",
-                                        Range = new()
-                                        {
-                                            Start = new Position(startMetrics.LineIndex, startCharOffset),
-                                            End = new Position(endMetrics.LineIndex, endCharOffset),
-                                        },
-                                        Source = "JsonSchemaLanguageServer",
-                                    };
+                                        Start = new Position(startMetrics.LineIndex, startCharOffset),
+                                        End = new Position(endMetrics.LineIndex, endCharOffset),
+                                    },
+                                    Source = "JsonSchemaLanguageServer",
+                                };
 
-                                    diagnostics.Add(d);
-                                }
-                                catch (InvalidOperationException ex)
+                                diagnostics.Add(d);
+                            }
+                            catch (InvalidOperationException ex)
+                            {
+                                diagnostics.Add(new Diagnostic
                                 {
-                                    diagnostics.Add(new Diagnostic
-                                    {
-                                        Code = DiagnosticCodes.ValidationResultProcessingError,
-                                        Severity = DiagnosticSeverity.Error,
-                                        Message = ex.Message + ex.StackTrace,
-                                    });
-                                }
+                                    Code = DiagnosticCodes.ValidationResultProcessingError,
+                                    Severity = DiagnosticSeverity.Error,
+                                    Message = ex.Message + ex.StackTrace,
+                                });
                             }
                         }
                     }
                 }
             }
-            catch (JsonException)
+        }
+        catch (JsonException)
+        {
+            // invalid json -- cannot validate
+        }
+        catch (Exception ex)
+        {
+            diagnostics.Add(new Diagnostic
             {
-                // invalid json -- cannot validate
-            }
-            catch (Exception ex)
-            {
-                diagnostics.Add(new Diagnostic
-                {
-                    Code = DiagnosticCodes.UnknownError,
-                    Severity = DiagnosticSeverity.Error,
-                    Message = "Please report this! Error details: " + ex.Message + ex.StackTrace,
-                });
-            }
-
-            return diagnostics;
+                Code = DiagnosticCodes.UnknownError,
+                Severity = DiagnosticSeverity.Error,
+                Message = "Please report this! Error details: " + ex.Message + ex.StackTrace,
+            });
         }
 
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!this.isDisposed)
-            {
-                if (disposing)
-                {
-                    this.schemaProvider.Dispose();
-                }
+        return diagnostics;
+    }
 
-                this.isDisposed = true;
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!this.isDisposed)
+        {
+            if (disposing)
+            {
+                this.schemaProvider.Dispose();
             }
+
+            this.isDisposed = true;
+        }
+    }
+
+    private static IEnumerable<ValidationResults> GetLeafNodeResults(ValidationResults root)
+    {
+        if (root.NestedResults.Count == 0)
+        {
+            yield return root;
+            yield break;
         }
 
-
-        private static IEnumerable<ValidationResults> GetLeafNodeResults(ValidationResults root)
+        foreach (ValidationResults nestedResult in root.NestedResults.SelectMany(x => GetLeafNodeResults(x)))
         {
-            if (root.NestedResults.Count == 0)
-            {
-                yield return root;
-                yield break;
-            }
-
-            foreach (ValidationResults nestedResult in root.NestedResults.SelectMany(x => GetLeafNodeResults(x)))
-            {
-                yield return nestedResult;
-            }
+            yield return nestedResult;
         }
     }
 }

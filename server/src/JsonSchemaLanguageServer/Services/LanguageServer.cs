@@ -1,160 +1,159 @@
 // <copyright file="LanguageServer.cs">Copyright (c) Peter Rosser.</copyright>
 
-namespace Rosser.Extensions.JsonSchemaLanguageServer.Services
+namespace Rosser.Extensions.JsonSchemaLanguageServer.Services;
+
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
+
+using Microsoft.Extensions.Logging;
+using Microsoft.VisualStudio.LanguageServer.Protocol;
+using Microsoft.VisualStudio.Threading;
+
+using Rosser.Extensions.JsonSchemaLanguageServer;
+
+using StreamJsonRpc;
+
+public class LanguageServer
 {
-    using System;
-    using System.Collections.Generic;
-    using System.IO;
-    using System.Linq;
-    using System.Text.Json;
-    using System.Threading;
-    using System.Threading.Tasks;
+    private readonly JoinableTaskContext syncTaskContext;
+    private JsonRpc? rpc;
+    private readonly ServerTarget target;
+    private readonly ManualResetEvent disconnectEvent = new(false);
+    private readonly SchemaAnalyzer schemaAnalyzer;
+    private readonly ConfigurationProvider configurationProvider;
+    private TextDocumentItem? textDocument = null;
 
-    using Microsoft.Extensions.Logging;
-    using Microsoft.VisualStudio.LanguageServer.Protocol;
-    using Microsoft.VisualStudio.Threading;
-
-    using Rosser.Extensions.JsonSchemaLanguageServer;
-
-    using StreamJsonRpc;
-
-    public class LanguageServer
+    public LanguageServer(ILogger<LanguageServer> logger, SchemaAnalyzer schemaAnalyzer, ConfigurationProvider configurationProvider)
     {
-        private readonly JoinableTaskContext syncTaskContext;
-        private JsonRpc? rpc;
-        private readonly ServerTarget target;
-        private readonly ManualResetEvent disconnectEvent = new(false);
-        private readonly SchemaAnalyzer schemaAnalyzer;
-        private readonly ConfigurationProvider configurationProvider;
-        private TextDocumentItem? textDocument = null;
+        this.syncTaskContext = new JoinableTaskContext();
+        this.target = new ServerTarget(this);
+        this.schemaAnalyzer = schemaAnalyzer;
+        this.configurationProvider = configurationProvider;
+        this.configurationProvider.ConfigurationChanged += this.OnConfigurationChanged;
+    }
 
-        public LanguageServer(ILogger<LanguageServer> logger, SchemaAnalyzer schemaAnalyzer, ConfigurationProvider configurationProvider)
+    public string CustomText { get; set; } = string.Empty;
+
+    public Configuration Configuration => this.configurationProvider.Configuration;
+
+    public event EventHandler? Disconnected;
+
+    public async Task InitializeAsync(Stream sender, Stream reader, CancellationToken ct = default)
+    {
+        this.rpc = JsonRpc.Attach(sender, reader, this.target);
+        this.rpc.Disconnected += this.OnRpcDisconnected;
+
+        this.target.Initialized += this.OnInitialized;
+
+        await this.schemaAnalyzer.InitializeAsync(ct);
+
+        this.OnInitialized(this, EventArgs.Empty);
+    }
+
+    private JsonRpc Rpc => this.rpc ?? throw new InvalidOperationException("Not initialized");
+
+    private void OnInitialized(object? sender, EventArgs e)
+    {
+    }
+
+    public Task OnTextDocumentOpenedAsync(DidOpenTextDocumentParams messageParams)
+    {
+        this.textDocument = messageParams.TextDocument;
+
+        return this.SendDiagnosticsAsync();
+    }
+
+    public async Task SendDiagnosticsAsync()
+    {
+        if (this.textDocument is null)
         {
-            this.syncTaskContext = new JoinableTaskContext();
-            this.target = new ServerTarget(this);
-            this.schemaAnalyzer = schemaAnalyzer;
-            this.configurationProvider = configurationProvider;
-            this.configurationProvider.ConfigurationChanged += this.OnConfigurationChanged;
+            return;
         }
 
-        public string CustomText { get; set; } = string.Empty;
+        List<Diagnostic> diagnostics = this.schemaAnalyzer.Analyze(this.textDocument.Text);
 
-        public Configuration Configuration => this.configurationProvider.Configuration;
-
-        public event EventHandler? Disconnected;
-
-        public async Task InitializeAsync(Stream sender, Stream reader, CancellationToken ct = default)
+        PublishDiagnosticParams parameter = new()
         {
-            this.rpc = JsonRpc.Attach(sender, reader, this.target);
-            this.rpc.Disconnected += this.OnRpcDisconnected;
+            Uri = this.textDocument.Uri,
+            Diagnostics = diagnostics.ToArray()
+        };
 
-            this.target.Initialized += this.OnInitialized;
-
-            await this.schemaAnalyzer.InitializeAsync(ct);
-
-            this.OnInitialized(this, EventArgs.Empty);
+        if (this.Configuration.MaxNumberOfProblems > -1)
+        {
+            parameter.Diagnostics = parameter.Diagnostics.Take(this.Configuration.MaxNumberOfProblems).ToArray();
         }
 
-        private JsonRpc Rpc => this.rpc ?? throw new InvalidOperationException("Not initialized");
+        await this.Rpc.NotifyWithParameterObjectAsync(Methods.TextDocumentPublishDiagnosticsName, parameter);
+    }
 
-        private void OnInitialized(object? sender, EventArgs e)
+    public Task SendDiagnosticsAsync(string uri, string text)
+    {
+        //string[] lines = text.Split(new string[] { Environment.NewLine }, StringSplitOptions.None);
+        List<Diagnostic> diagnostics = this.schemaAnalyzer.Analyze(text);
+
+        PublishDiagnosticParams parameter = new()
         {
+            Uri = new Uri(uri),
+            Diagnostics = diagnostics.ToArray()
+        };
+
+        if (this.Configuration.MaxNumberOfProblems > -1)
+        {
+            parameter.Diagnostics = parameter.Diagnostics.Take(this.Configuration.MaxNumberOfProblems).ToArray();
         }
 
-        public Task OnTextDocumentOpenedAsync(DidOpenTextDocumentParams messageParams)
-        {
-            this.textDocument = messageParams.TextDocument;
+        return this.Rpc.NotifyWithParameterObjectAsync(Methods.TextDocumentPublishDiagnosticsName, parameter);
+    }
 
-            return this.SendDiagnosticsAsync();
-        }
-
-        public async Task SendDiagnosticsAsync()
+    public void SendSettings(DidChangeConfigurationParams parameter)
+    {
+        try
         {
-            if (this.textDocument is null)
+            string configurationJson = parameter.Settings.ToString() ?? "{}";
+            var serializerOptions = new JsonSerializerOptions
             {
-                return;
-            }
-
-            List<Diagnostic> diagnostics = this.schemaAnalyzer.Analyze(this.textDocument.Text);
-
-            PublishDiagnosticParams parameter = new()
-            {
-                Uri = this.textDocument.Uri,
-                Diagnostics = diagnostics.ToArray()
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             };
-
-            if (this.Configuration.MaxNumberOfProblems > -1)
-            {
-                parameter.Diagnostics = parameter.Diagnostics.Take(this.Configuration.MaxNumberOfProblems).ToArray();
-            }
-
-            await this.Rpc.NotifyWithParameterObjectAsync(Methods.TextDocumentPublishDiagnosticsName, parameter);
+            Configuration? configuration = JsonSerializer.Deserialize<Configuration>(configurationJson, serializerOptions);
+            this.configurationProvider.UpdateConfiguration(configuration ?? new());
         }
+        catch { }
+    }
 
-        public Task SendDiagnosticsAsync(string uri, string text)
-        {
-            //string[] lines = text.Split(new string[] { Environment.NewLine }, StringSplitOptions.None);
-            List<Diagnostic> diagnostics = this.schemaAnalyzer.Analyze(text);
+    public void WaitForExit() => this.disconnectEvent.WaitOne();
 
-            PublishDiagnosticParams parameter = new()
-            {
-                Uri = new Uri(uri),
-                Diagnostics = diagnostics.ToArray()
-            };
+    public void Exit()
+    {
+        _ = this.disconnectEvent.Set();
 
-            if (this.Configuration.MaxNumberOfProblems > -1)
-            {
-                parameter.Diagnostics = parameter.Diagnostics.Take(this.Configuration.MaxNumberOfProblems).ToArray();
-            }
+        Disconnected?.Invoke(this, new EventArgs());
+    }
 
-            return this.Rpc.NotifyWithParameterObjectAsync(Methods.TextDocumentPublishDiagnosticsName, parameter);
-        }
+    private void OnRpcDisconnected(object? sender, JsonRpcDisconnectedEventArgs e) => this.Exit();
 
-        public void SendSettings(DidChangeConfigurationParams parameter)
+    private void OnConfigurationChanged(object? sender, ConfigurationChangedEventArgs e)
+    {
+        using var done = new AutoResetEvent(false);
+        _ = ThreadPool.QueueUserWorkItem((_) =>
         {
             try
             {
-                string configurationJson = parameter.Settings.ToString() ?? "{}";
-                var serializerOptions = new JsonSerializerOptions
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                };
-                Configuration? configuration = JsonSerializer.Deserialize<Configuration>(configurationJson, serializerOptions);
-                this.configurationProvider.UpdateConfiguration(configuration ?? new());
+                JoinableTaskFactory taskFactory = this.syncTaskContext.CreateFactory(this.syncTaskContext.CreateCollection());
+
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+                taskFactory.Run(async () => await this.SendDiagnosticsAsync());
             }
-            catch { }
-        }
-
-        public void WaitForExit() => this.disconnectEvent.WaitOne();
-
-        public void Exit()
-        {
-            this.disconnectEvent.Set();
-
-            Disconnected?.Invoke(this, new EventArgs());
-        }
-
-        private void OnRpcDisconnected(object? sender, JsonRpcDisconnectedEventArgs e) => this.Exit();
-
-        private void OnConfigurationChanged(object? sender, ConfigurationChangedEventArgs e)
-        {
-            using var done = new AutoResetEvent(false);
-            ThreadPool.QueueUserWorkItem((_) =>
+            finally
             {
-                try
-                {
-                    var taskFactory = this.syncTaskContext.CreateFactory(this.syncTaskContext.CreateCollection());
+                _ = done.Set();
+            }
+        });
 
-                    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-                    taskFactory.Run(async () => await this.SendDiagnosticsAsync());
-                }
-                finally
-                {
-                    done.Set();
-                }
-            });
-
-            done.WaitOne();
-        }
+        _ = done.WaitOne();
     }
 }

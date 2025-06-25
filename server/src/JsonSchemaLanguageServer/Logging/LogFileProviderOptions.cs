@@ -1,10 +1,9 @@
 // <copyright file="LogFileProviderOptions.cs">Copyright (c) Peter Rosser.</copyright>
 
-namespace Rosser.Extensions.JsonSchemaLanguageServer.Logging
+namespace Rosser.Extensions.JsonSchemaLanguageServer.Logging;
+
+public class LogFileProviderOptions
 {
-    public class LogFileProviderOptions
-    {
-        public string LogDirectory { get; set; } = string.Empty;
-        public string BaseName { get; set; } = "log";
-    }
+    public string LogDirectory { get; set; } = string.Empty;
+    public string BaseName { get; set; } = "log";
 }

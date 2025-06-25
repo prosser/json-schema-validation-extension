@@ -1,40 +1,36 @@
 // <copyright file="ConfigurationProvider.cs">Copyright (c) Peter Rosser.</copyright>
 
-namespace Rosser.Extensions.JsonSchemaLanguageServer.Services
+namespace Rosser.Extensions.JsonSchemaLanguageServer.Services;
+
+using System;
+
+using Rosser.Extensions.JsonSchemaLanguageServer;
+
+public class ConfigurationProvider
 {
-    using System;
+    public Configuration Configuration { get; private set; } = new();
 
-    using Newtonsoft.Json.Linq;
-
-    using Rosser.Extensions.JsonSchemaLanguageServer;
-
-    public class ConfigurationProvider
+    public void UpdateConfiguration(Configuration value)
     {
-        private Configuration configuration = new();
-        public Configuration Configuration => this.configuration;
-
-        public void UpdateConfiguration(Configuration value)
+        if (this.Configuration != value)
         {
-            if (this.configuration != value)
-            {
-                Configuration old = this.configuration;
-                this.configuration = value;
-                this.ConfigurationChanged?.Invoke(this, new ConfigurationChangedEventArgs(old, value));
-            }
+            Configuration old = this.Configuration;
+            this.Configuration = value;
+            this.ConfigurationChanged?.Invoke(this, new ConfigurationChangedEventArgs(old, value));
         }
-
-        public event EventHandler<ConfigurationChangedEventArgs>? ConfigurationChanged;
     }
 
-    public class ConfigurationChangedEventArgs : EventArgs
-    {
-        public ConfigurationChangedEventArgs(Configuration oldConfiguration, Configuration newConfiguration)
-        {
-            this.OldConfiguration = oldConfiguration;
-            this.NewConfiguration = newConfiguration;
-        }
+    public event EventHandler<ConfigurationChangedEventArgs>? ConfigurationChanged;
+}
 
-        public Configuration OldConfiguration { get; }
-        public Configuration NewConfiguration { get; }
+public class ConfigurationChangedEventArgs : EventArgs
+{
+    public ConfigurationChangedEventArgs(Configuration oldConfiguration, Configuration newConfiguration)
+    {
+        this.OldConfiguration = oldConfiguration;
+        this.NewConfiguration = newConfiguration;
     }
+
+    public Configuration OldConfiguration { get; }
+    public Configuration NewConfiguration { get; }
 }

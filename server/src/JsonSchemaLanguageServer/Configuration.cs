@@ -10,8 +10,8 @@ namespace Rosser.Extensions.JsonSchemaLanguageServer
 
     public class Configuration
     {
-        private IReadOnlyList<string>? searchPaths;
-        private IReadOnlyList<string>? searchGlobs;
+        private IReadOnlyList<string>? searchPaths = ["C:\\repos\\ICH.Ingestion.Schema\\PublicApiSchemas\\schemas"];
+        private IReadOnlyList<string>? searchGlobs = ["**\\$1.$2.json"];
 
         public int MaxNumberOfProblems { get; set; }
 
@@ -27,7 +27,7 @@ namespace Rosser.Extensions.JsonSchemaLanguageServer
             set => this.searchGlobs = ToArray(value);
         }
 
-        public string? SchemaSearchUrlPattern { get; set; }
+        public string? SchemaSearchUrlPattern { get; set; } = "^https?://.+/(.+)/(.+)(?:#?\\?.+)?$";
 
         public Configuration Clone()
         {
@@ -91,7 +91,7 @@ namespace Rosser.Extensions.JsonSchemaLanguageServer
             return new Configuration
             {
                 MaxNumberOfProblems = this.MaxNumberOfProblems,
-                searchGlobs = searchGlobs,
+                searchGlobs = this.searchGlobs,
                 searchPaths = value.Length == 0 ? null : value,
                 SchemaSearchUrlPattern = this.SchemaSearchUrlPattern,
             };

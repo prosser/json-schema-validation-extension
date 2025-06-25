@@ -20,7 +20,6 @@ namespace Rosser.Extensions.JsonSchemaLanguageServer.Services
 
     public class LanguageServer
     {
-        private readonly JoinableTaskContext syncTaskContext;
         private JsonRpc? rpc;
         private readonly ServerTarget target;
         private readonly ManualResetEvent disconnectEvent = new(false);
@@ -36,6 +35,8 @@ namespace Rosser.Extensions.JsonSchemaLanguageServer.Services
             this.configurationProvider = configurationProvider;
             this.configurationProvider.ConfigurationChanged += this.OnConfigurationChanged;
         }
+
+        public JoinableTaskContext syncTaskContext { get; }
 
         public string CustomText { get; set; } = string.Empty;
 

@@ -48,10 +48,10 @@ namespace Rosser.Extensions.JsonSchemaLanguageServer.Services
 
         public bool TryGetSchema(string url, [NotNullWhen(true)] out JsonSchema? schema)
         {
-            if (this.schemaCache.TryGetValue(url, out schema))
-            {
-                return true;
-            }
+            //if (this.schemaCache.TryGetValue(url, out schema))
+            //{
+            //    return true;
+            //}
 
             JsonSchema? downloaded = null;
             using var downloadDone = new AutoResetEvent(false);

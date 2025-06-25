@@ -7,6 +7,7 @@ namespace Rosser.Extensions.JsonSchemaLanguageServer
     using System.Threading.Tasks;
 
     using Microsoft.VisualStudio.LanguageServer.Protocol;
+    using Microsoft.VisualStudio.Threading;
 
     using Newtonsoft.Json.Linq;
 
@@ -58,8 +59,9 @@ namespace Rosser.Extensions.JsonSchemaLanguageServer
         public void OnTextDocumentOpened(JToken arg)
         {
             DidOpenTextDocumentParams? parameter = arg.ToObject<DidOpenTextDocumentParams>();
-            // Use Task.Run to avoid potential deadlocks instead of Wait()
-            Task.Run(async () => await this.server.OnTextDocumentOpenedAsync(parameter).ConfigureAwait(false)).GetAwaiter().GetResult();
+            // Access the JoinableTaskContext from the LanguageServer instance to properly handle the async call
+            var jtf = new JoinableTaskFactory(this.server.syncTaskContext);
+            jtf.Run(() => this.server.OnTextDocumentOpenedAsync(parameter));
         }
 
         [JsonRpcMethod(Methods.TextDocumentDidChangeName)]

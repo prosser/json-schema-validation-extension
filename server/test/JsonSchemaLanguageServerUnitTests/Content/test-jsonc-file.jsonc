@@ -1,0 +1,17 @@
+{
+  // This is a test JSONC file
+  "$schema": "https://json-schema.org/draft/2020-12/schema#",
+  "title": "Test JSONC Schema", // Title comment
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "A person's name" // Property comment
+    },
+    "age": {
+      "type": "number", // Type comment
+      "minimum": 0
+    }
+  },
+  "required": ["name"] // Required fields
+}

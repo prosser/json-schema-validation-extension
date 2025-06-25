@@ -73,7 +73,7 @@ namespace Rosser.Extensions.JsonSchemaLanguageServer.Services
             downloadDone.WaitOne();
             schema = downloaded;
 
-            if (schema is not null)
+            if (schema is not null && !this.schemaCache.ContainsKey(url))
             {
                 this.schemaCache.Add(url, schema);
                 return true;

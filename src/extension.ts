@@ -25,10 +25,10 @@ export function activate(context: vscode.ExtensionContext) {
       ? path.join('osx-x64', 'JsonSchemaLanguageServer')
       : path.join('linux-x64', 'JsonSchemaLanguageServer');
 
-  let serverModule = context.asAbsolutePath(path.join('server', 'src', 'JsonSchemaLanguageServer', 'bin', 'Debug', 'net5.0', 'JsonSchemaLanguageServer.exe'));
+  let serverModule = context.asAbsolutePath(path.join('server', 'src', 'JsonSchemaLanguageServer', 'bin', 'Debug', 'net9.0', 'JsonSchemaLanguageServer.exe'));
 
   if (!fs.existsSync(serverModule)) {
-    serverModule = context.asAbsolutePath(path.join('dist', 'server', serverPath, 'JsonSchemaLanguageServer.exe'));
+    serverModule = context.asAbsolutePath(path.join('dist', 'server', serverPath));
   }
 
   const workPath = path.dirname(serverModule);
@@ -50,10 +50,12 @@ export function activate(context: vscode.ExtensionContext) {
   // Options to control the language client
   const clientOptions: LanguageClientOptions = {
     // Register the server for JSON documents
-    documentSelector: [{ scheme: 'file', language: 'json' }],
+    documentSelector: [
+        { scheme: 'file', language: 'json' },
+        { scheme: 'file', language: 'jsonc' }],
     synchronize: {
       // Notify the server about file changes to .json files contained in the workspace
-      fileEvents: workspace.createFileSystemWatcher('**/.json')
+      fileEvents: workspace.createFileSystemWatcher('**/.json*')
     }
   };
 

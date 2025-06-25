@@ -40,12 +40,40 @@ namespace Rosser.Extensions.JsonSchemaLanguageServer.Services
             List<Diagnostic> diagnostics = new();
 
             JsonDocument? doc;
+            string? schemaUrl = null;
 
             try
             {
+                // First try to parse without comment handling for backward compatibility
                 doc = JsonDocument.Parse(text);
                 JsonElement root = doc.RootElement;
-                if (root.TryGetPropertyValue("$schema", out string? schemaUrl))
+                root.TryGetPropertyValue("$schema", out schemaUrl);
+            }
+            catch (JsonException)
+            {
+                // If parsing fails, try with comment handling for JSONC support
+                try
+                {
+                    var options = new JsonDocumentOptions
+                    {
+                        CommentHandling = JsonCommentHandling.Skip,
+                        AllowTrailingCommas = true
+                    };
+                    doc = JsonDocument.Parse(text, options);
+                    JsonElement root = doc.RootElement;
+                    root.TryGetPropertyValue("$schema", out schemaUrl);
+                }
+                catch (JsonException)
+                {
+                    // Still invalid JSON/JSONC - cannot validate
+                    return diagnostics;
+                }
+            }
+
+            try
+            {
+                JsonElement root = doc.RootElement;
+                if (!string.IsNullOrEmpty(schemaUrl))
                 {
                     if (!this.schemaProvider.TryGetSchema(schemaUrl, out JsonSchema? schema))
                     {

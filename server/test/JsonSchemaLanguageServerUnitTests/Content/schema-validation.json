@@ -24,6 +24,10 @@
           "message": "Value is string but should be array"
         }
       ]
+    },
+    {
+      "name": "jsonc-with-comments",
+      "expectedDiagnostics": []
     }
   ]
 }

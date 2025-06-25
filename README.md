@@ -47,6 +47,8 @@ Supports VS Code running on Windows x64, Linux x64, and OSX.
 
 0.0.8:
 - Updated to .NET 8.0 (LTS)
+- Added support for osx-arm64 (Apple Silicon)
+- Removed support for osx-x64
 - Upgraded all the packages! Man, it's been awhile.
 - Fix for language server issue that would cause things to break in modern VS Code.
 

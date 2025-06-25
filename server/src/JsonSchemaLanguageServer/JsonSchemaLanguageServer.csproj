@@ -35,7 +35,21 @@
   </ItemGroup>
 
   <ItemGroup>
-    <InternalsVisibleTo Include="JsonSchemaLanguageServerUnitTests"/>
+    <InternalsVisibleTo Include="JsonSchemaLanguageServerUnitTests" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Remove="**\*.resources.dll" />
+    <Content Remove="**\*.resources.dll" />
+    <None Remove="**\*.resources.dll" />
+  </ItemGroup>
+
+  <Target Name="RemoveSatelliteAssemblies" AfterTargets="Publish">
+    <ItemGroup>
+      <PublishedResourceDlls Include="$(PublishDir)**\*.resources.dll" />
+    </ItemGroup>
+    <Delete Files="@(PublishedResourceDlls)" />
+    <RemoveDir Directories="$(IntermediateOutputPath)publish\*.resources" />
+    <RemoveDir Directories="$(PublishDir)*.resources" />
+  </Target>
 </Project>

@@ -14,5 +14,6 @@
         "esbuild",
         "outfile",
         "prosser"
-    ]
+    ],
+    "sarif-viewer.connectToGithubCodeScanning": "off"
 }

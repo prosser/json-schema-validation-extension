@@ -4,8 +4,6 @@ namespace Rosser.Extensions.JsonSchemaLanguageServer.Services
 {
     using System;
 
-    using Newtonsoft.Json.Linq;
-
     using Rosser.Extensions.JsonSchemaLanguageServer;
 
     public class ConfigurationProvider

@@ -28,7 +28,7 @@ export function activate(context: vscode.ExtensionContext) {
   let serverModule = context.asAbsolutePath(path.join('server', 'src', 'JsonSchemaLanguageServer', 'bin', 'Debug', 'net5.0', 'JsonSchemaLanguageServer.exe'));
 
   if (!fs.existsSync(serverModule)) {
-    serverModule = context.asAbsolutePath(path.join('dist', 'server', serverPath));
+    serverModule = context.asAbsolutePath(path.join('dist', 'server', serverPath, 'JsonSchemaLanguageServer.exe'));
   }
 
   const workPath = path.dirname(serverModule);

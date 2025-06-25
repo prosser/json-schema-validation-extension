@@ -19,4 +19,23 @@
     <PackageReference Include="System.IO.Pipes.AccessControl" Version="5.0.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Using Include="System" />
+    <Using Include="System.Collections.Generic" />
+    <Using Include="System.Diagnostics" />
+    <Using Include="System.Diagnostics.CodeAnalysis" />
+    <Using Include="System.IO" />
+    <Using Include="System.Linq" />
+    <Using Include="System.Text.Json" />
+    <Using Include="System.Threading" />
+    <Using Include="System.Threading.Tasks" />
+    <Using Include="Rosser.Extensions.JsonSchemaLanguageServer" />
+    <Using Include="Rosser.Extensions.JsonSchemaLanguageServer.Logging" />
+    <Using Include="Rosser.Extensions.JsonSchemaLanguageServer.Services" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="JsonSchemaLanguageServerUnitTests"/>
+  </ItemGroup>
+
 </Project>

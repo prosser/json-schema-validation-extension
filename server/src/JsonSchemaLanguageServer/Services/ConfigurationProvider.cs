@@ -23,14 +23,8 @@ public class ConfigurationProvider
     public event EventHandler<ConfigurationChangedEventArgs>? ConfigurationChanged;
 }
 
-public class ConfigurationChangedEventArgs : EventArgs
+public class ConfigurationChangedEventArgs(Configuration oldConfiguration, Configuration newConfiguration) : EventArgs
 {
-    public ConfigurationChangedEventArgs(Configuration oldConfiguration, Configuration newConfiguration)
-    {
-        this.OldConfiguration = oldConfiguration;
-        this.NewConfiguration = newConfiguration;
-    }
-
-    public Configuration OldConfiguration { get; }
-    public Configuration NewConfiguration { get; }
+    public Configuration OldConfiguration { get; } = oldConfiguration;
+    public Configuration NewConfiguration { get; } = newConfiguration;
 }

@@ -13,7 +13,7 @@ public static class TextHelper
 
     public static TextLineMetrics[] CreateTextLineMetrics(string text)
     {
-        string[] lines = text.Split("\r\n").ToArray();
+        string[] lines = [.. text.Split("\r\n")];
 
         var metrics = new TextLineMetrics[lines.Length];
 

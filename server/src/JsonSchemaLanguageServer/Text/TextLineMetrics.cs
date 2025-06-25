@@ -7,20 +7,12 @@ using System.Diagnostics;
 using System.Text;
 
 [DebuggerDisplay("Line: {LineIndex}, bOffset: {ByteOffset}, bCount: {ByteCount}, cCount: {CharCount}")]
-public readonly struct TextLineMetrics : IEquatable<TextLineMetrics>
+public readonly struct TextLineMetrics(string line, int lineIndex, int byteOffset, int byteCount) : IEquatable<TextLineMetrics>
 {
-    public TextLineMetrics(string line, int lineIndex, int byteOffset, int byteCount)
-    {
-        this.Line = line;
-        this.LineIndex = lineIndex;
-        this.ByteOffset = byteOffset;
-        this.ByteCount = byteCount;
-    }
-
-    public string Line { get; }
-    public int LineIndex { get; }
-    public int ByteOffset { get; }
-    public int ByteCount { get; }
+    public string Line { get; } = line;
+    public int LineIndex { get; } = lineIndex;
+    public int ByteOffset { get; } = byteOffset;
+    public int ByteCount { get; } = byteCount;
     public int CharCount => this.Line.Length;
 
     public bool Equals(TextLineMetrics other)
@@ -46,4 +38,7 @@ public readonly struct TextLineMetrics : IEquatable<TextLineMetrics>
         int charsBeforeOffset = Encoding.UTF8.GetCharCount(utf8Bytes, 0, localByteOffset - 1);
         return charsBeforeOffset + 1;
     }
+    public static bool operator ==(TextLineMetrics left, TextLineMetrics right) => left.Equals(right);
+
+    public static bool operator !=(TextLineMetrics left, TextLineMetrics right) => !(left == right);
 }

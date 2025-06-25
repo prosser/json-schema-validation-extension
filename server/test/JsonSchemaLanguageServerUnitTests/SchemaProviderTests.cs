@@ -11,13 +11,8 @@ using Rosser.Extensions.JsonSchemaLanguageServer.Services;
 using Xunit;
 using Xunit.Abstractions;
 
-public class SchemaProviderTests : TestBase
+public class SchemaProviderTests(ITestOutputHelper output) : TestBase(output)
 {
-    public SchemaProviderTests(ITestOutputHelper output)
-        : base(output)
-    {
-    }
-
     [Fact]
     public async Task InitializingPreloadsMetaSchemasAsync()
     {

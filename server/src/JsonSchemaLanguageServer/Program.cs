@@ -1,6 +1,5 @@
 // <copyright file="Program.cs">Copyright (c) Peter Rosser.</copyright>
 
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 [assembly: ComVisible(false)]
@@ -9,23 +8,12 @@ using System.Runtime.InteropServices;
 
 [assembly: Guid("7aef478a-6fb9-482e-92c7-fa7f8126416a")]
 
-[assembly: InternalsVisibleTo("JsonSchemaLanguageServerUnitTests")]
-
 namespace Rosser.Extensions.JsonSchemaLanguageServer;
 
-using System;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
 using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-
-using Rosser.Extensions.JsonSchemaLanguageServer.Logging;
-using Rosser.Extensions.JsonSchemaLanguageServer.Services;
 
 internal class Program
 {
@@ -54,7 +42,7 @@ internal class Program
 
         for (int i = 0; i < args.Length; i++)
         {
-            logger.LogInformation($"arg{i}: '{args[i]}'");
+            logger.LogInformation("arg{i}: '{arg}'", i, args[i]);
         }
 
         try

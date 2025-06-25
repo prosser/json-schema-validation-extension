@@ -14,15 +14,8 @@ using Rosser.Extensions.JsonSchemaLanguageServer.Services;
 
 using StreamJsonRpc;
 
-public class ServerTarget
+public class ServerTarget(LanguageServer server)
 {
-    private readonly LanguageServer server;
-
-    public ServerTarget(LanguageServer server)
-    {
-        this.server = server;
-    }
-
     public event EventHandler? Initialized;
 
     [JsonRpcMethod(Methods.InitializeName)]
@@ -38,7 +31,7 @@ public class ServerTarget
             CompletionProvider = new CompletionOptions
             {
                 ResolveProvider = false,
-                TriggerCharacters = new string[] { ",", "." }
+                TriggerCharacters = [",", "."]
             }
         };
 
@@ -56,9 +49,14 @@ public class ServerTarget
     public void OnTextDocumentOpened(JToken arg)
     {
         DidOpenTextDocumentParams? parameter = arg.ToObject<DidOpenTextDocumentParams>();
+        if (parameter is null)
+        {
+            return;
+        }
+
         _ = Task.Run(async () =>
         {
-            await this.server.OnTextDocumentOpenedAsync(parameter);
+            await server.OnTextDocumentOpenedAsync(parameter);
         }).GetAwaiter();
     }
 
@@ -66,10 +64,16 @@ public class ServerTarget
     public void OnTextDocumentChanged(JToken arg)
     {
         DidChangeTextDocumentParams? parameter = arg.ToObject<DidChangeTextDocumentParams>();
-        _ = this.server.SendDiagnosticsAsync(parameter.TextDocument.Uri.ToString(), parameter.ContentChanges[0].Text);
+        if (parameter is null)
+        {
+            return;
+        }
+
+        _ = server.SendDiagnosticsAsync(parameter.TextDocument.Uri.ToString(), parameter.ContentChanges[0].Text);
     }
 
     [JsonRpcMethod(Methods.TextDocumentCompletionName)]
+    [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Public interface")]
     public CompletionItem[] OnTextDocumentCompletion(JToken arg)
     {
         var items = new List<CompletionItem>();
@@ -85,21 +89,27 @@ public class ServerTarget
             items.Add(item);
         }
 
-        return items.ToArray();
+        return [.. items];
     }
 
     [JsonRpcMethod(Methods.WorkspaceDidChangeConfigurationName)]
     public void OnDidChangeConfiguration(JToken arg)
     {
         DidChangeConfigurationParams? parameter = arg.ToObject<DidChangeConfigurationParams>();
-        this.server.SendSettings(parameter);
+        if (parameter is null)
+        {
+            return;
+        }
+
+        server.SendSettings(parameter);
     }
 
     [JsonRpcMethod(Methods.ShutdownName)]
+    [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Public interface")]
     public object? Shutdown() => null;
 
     [JsonRpcMethod(Methods.ExitName)]
-    public void Exit() => this.server.Exit();
+    public void Exit() => server.Exit();
 
-    public string GetText() => string.IsNullOrWhiteSpace(this.server.CustomText) ? "custom text from language server target" : this.server.CustomText;
+    public string GetText() => string.IsNullOrWhiteSpace(server.CustomText) ? "custom text from language server target" : server.CustomText;
 }

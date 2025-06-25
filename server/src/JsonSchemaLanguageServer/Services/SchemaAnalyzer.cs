@@ -12,16 +12,12 @@ using System.Threading.Tasks;
 using Json.Schema;
 
 using Microsoft.VisualStudio.LanguageServer.Protocol;
+using Rosser.Extensions.JsonSchemaLanguageServer.Extensions;
+using Rosser.Extensions.JsonSchemaLanguageServer.Text;
 
-public class SchemaAnalyzer : IDisposable
+public class SchemaAnalyzer(SchemaProvider schemaProvider) : IDisposable
 {
-    private readonly SchemaProvider schemaProvider;
     private bool isDisposed;
-
-    public SchemaAnalyzer(SchemaProvider schemaProvider)
-    {
-        this.schemaProvider = schemaProvider;
-    }
 
     public void Dispose()
     {
@@ -30,7 +26,7 @@ public class SchemaAnalyzer : IDisposable
         GC.SuppressFinalize(this);
     }
 
-    public async Task InitializeAsync(CancellationToken ct = default) => await this.schemaProvider.InitializeAsync(ct);
+    public async Task InitializeAsync(CancellationToken ct = default) => await schemaProvider.InitializeAsync(ct);
 
     public List<Diagnostic> Analyze(string text)
     {
@@ -44,21 +40,21 @@ public class SchemaAnalyzer : IDisposable
             JsonElement root = doc.RootElement;
             if (root.TryGetPropertyValue("$schema", out string? schemaUrl))
             {
-                if (!this.schemaProvider.TryGetSchema(schemaUrl, out JsonSchema? schema))
+                if (!schemaProvider.TryGetSchema(schemaUrl, out JsonSchema? schema))
                 {
                     diagnostics.Add(new Diagnostic
                     {
-                        Code = DiagnosticCodes.CouldNotResolveSchema,
+                        Code = (int)DiagnosticCodes.CouldNotResolveSchema,
                     });
                 }
                 else
                 {
-                    ValidationResults validationResults = schema.Validate(root, new ValidationOptions { OutputFormat = OutputFormat.Detailed });
-                    if (!validationResults.IsValid)
+                    EvaluationResults evaluation = schema.Evaluate(root, new() { OutputFormat = OutputFormat.Hierarchical });
+                    if (!evaluation.IsValid)
                     {
                         TextLineMetrics[] metrics = TextHelper.CreateTextLineMetrics(text);
 
-                        foreach (ValidationResults leaf in GetLeafNodeResults(validationResults))
+                        foreach (EvaluationResults leaf in GetLeafNodeResults(evaluation))
                         {
                             long start = 0;
                             long end = 0;
@@ -74,9 +70,9 @@ public class SchemaAnalyzer : IDisposable
 
                                 var d = new Diagnostic
                                 {
-                                    Code = DiagnosticCodes.ValidationError,
+                                    Code = (int)DiagnosticCodes.ValidationError,
                                     Severity = DiagnosticSeverity.Error,
-                                    Message = leaf.Message ?? "Schema validation failure",
+                                    Message = string.Join(",", leaf.Errors?.Select(x => $"{x.Key}: {x.Value}") ?? ["Schema validation failure"]),
                                     Range = new()
                                     {
                                         Start = new Position(startMetrics.LineIndex, startCharOffset),
@@ -91,7 +87,7 @@ public class SchemaAnalyzer : IDisposable
                             {
                                 diagnostics.Add(new Diagnostic
                                 {
-                                    Code = DiagnosticCodes.ValidationResultProcessingError,
+                                    Code = (int)DiagnosticCodes.ValidationResultProcessingError,
                                     Severity = DiagnosticSeverity.Error,
                                     Message = ex.Message + ex.StackTrace,
                                 });
@@ -109,7 +105,7 @@ public class SchemaAnalyzer : IDisposable
         {
             diagnostics.Add(new Diagnostic
             {
-                Code = DiagnosticCodes.UnknownError,
+                Code = (int)DiagnosticCodes.UnknownError,
                 Severity = DiagnosticSeverity.Error,
                 Message = "Please report this! Error details: " + ex.Message + ex.StackTrace,
             });
@@ -124,22 +120,22 @@ public class SchemaAnalyzer : IDisposable
         {
             if (disposing)
             {
-                this.schemaProvider.Dispose();
+                schemaProvider.Dispose();
             }
 
             this.isDisposed = true;
         }
     }
 
-    private static IEnumerable<ValidationResults> GetLeafNodeResults(ValidationResults root)
+    private static IEnumerable<EvaluationResults> GetLeafNodeResults(EvaluationResults root)
     {
-        if (root.NestedResults.Count == 0)
+        if (root.Details.Count == 0)
         {
             yield return root;
             yield break;
         }
 
-        foreach (ValidationResults nestedResult in root.NestedResults.SelectMany(x => GetLeafNodeResults(x)))
+        foreach (EvaluationResults nestedResult in root.Details.SelectMany(x => GetLeafNodeResults(x)))
         {
             yield return nestedResult;
         }

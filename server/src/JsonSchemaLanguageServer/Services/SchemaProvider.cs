@@ -13,18 +13,12 @@ using Json.Schema;
 
 using Microsoft.VisualStudio.Threading;
 
-public class SchemaProvider : IDisposable
+public class SchemaProvider(HttpMessageHandler messageHandler) : IDisposable
 {
-    private readonly JoinableTaskContext syncTaskContext;
-    private readonly HttpClient? httpClient;
+    private readonly JoinableTaskContext syncTaskContext = new();
+    private readonly HttpClient? httpClient = new(messageHandler);
     private bool isDisposed;
     internal const string Schema2020Url = @"https://json-schema.org/draft/2020-12/schema";
-
-    public SchemaProvider(HttpMessageHandler messageHandler)
-    {
-        this.syncTaskContext = new JoinableTaskContext();
-        this.httpClient = new HttpClient(messageHandler);
-    }
 
     private HttpClient HttpClient => this.httpClient ?? throw new InvalidOperationException("Not initialized");
     public Dictionary<string, JsonSchema> SchemaCache { get; } = new(StringComparer.OrdinalIgnoreCase);

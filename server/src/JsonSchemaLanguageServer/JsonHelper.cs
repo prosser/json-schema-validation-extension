@@ -115,7 +115,7 @@ public static class JsonHelper
 
         if (!found)
         {
-            throw new InvalidOperationException($"JSON Pointer '{jsonPointer.Source}' was not found.");
+            throw new InvalidOperationException($"JSON Pointer '{jsonPointer}' was not found.");
         }
     }
 
@@ -210,7 +210,7 @@ public static class JsonHelper
         }
 
         public PathStack(JsonPointer pointer)
-            : this(pointer.Segments.Select(x => x.Value))
+            : this(pointer.Select(x => x))
         {
         }
 
@@ -355,16 +355,16 @@ public static class JsonHelper
         public string? S;
         public int? N;
 
-        public bool IsString => this.S is not null;
-        public bool IsIndex => this.N is not null;
-        public bool IsEmpty => this.S is null && this.N is null;
+        public readonly bool IsString => this.S is not null;
+        public readonly bool IsIndex => this.N is not null;
+        public readonly bool IsEmpty => this.S is null && this.N is null;
 
         public static PathSegment Empty => new();
 
         public static implicit operator PathSegment(string str) => new(str);
         public static implicit operator PathSegment(int n) => new(n);
 
-        public bool Equals(PathSegment other)
+        public readonly bool Equals(PathSegment other)
         {
             return this.N == other.N &&
                 this.S == other.S;
@@ -374,6 +374,6 @@ public static class JsonHelper
 
         public static PathSegment operator --(PathSegment si) => !si.IsIndex ? throw new InvalidOperationException("Not an integer") : new PathSegment(si.N!.Value - 1);
 
-        public override string? ToString() => this.S ?? this.N?.ToString();
+        public override readonly string? ToString() => this.S ?? this.N?.ToString();
     }
 }

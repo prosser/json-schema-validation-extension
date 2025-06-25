@@ -2,30 +2,25 @@
 
 namespace Rosser.Extensions.JsonSchemaLanguageServer.Services;
 
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
-
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.LanguageServer.Protocol;
 using Microsoft.VisualStudio.Threading;
-
-using Rosser.Extensions.JsonSchemaLanguageServer;
 
 using StreamJsonRpc;
 
 public class LanguageServer
 {
-    private readonly JoinableTaskContext syncTaskContext;
-    private JsonRpc? rpc;
-    private readonly ServerTarget target;
+    private static readonly JsonSerializerOptions SerializerOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+    };
+
+    private readonly ConfigurationProvider configurationProvider;
     private readonly ManualResetEvent disconnectEvent = new(false);
     private readonly SchemaAnalyzer schemaAnalyzer;
-    private readonly ConfigurationProvider configurationProvider;
+    private readonly JoinableTaskContext syncTaskContext;
+    private readonly ServerTarget target;
+    private JsonRpc? rpc;
     private TextDocumentItem? textDocument = null;
 
     public LanguageServer(ILogger<LanguageServer> logger, SchemaAnalyzer schemaAnalyzer, ConfigurationProvider configurationProvider)
@@ -37,11 +32,18 @@ public class LanguageServer
         this.configurationProvider.ConfigurationChanged += this.OnConfigurationChanged;
     }
 
-    public string CustomText { get; set; } = string.Empty;
+    public event EventHandler? Disconnected;
 
     public Configuration Configuration => this.configurationProvider.Configuration;
+    public string CustomText { get; set; } = string.Empty;
+    private JsonRpc Rpc => this.rpc ?? throw new InvalidOperationException("Not initialized");
 
-    public event EventHandler? Disconnected;
+    public void Exit()
+    {
+        _ = this.disconnectEvent.Set();
+
+        Disconnected?.Invoke(this, new EventArgs());
+    }
 
     public async Task InitializeAsync(Stream sender, Stream reader, CancellationToken ct = default)
     {
@@ -53,12 +55,6 @@ public class LanguageServer
         await this.schemaAnalyzer.InitializeAsync(ct);
 
         this.OnInitialized(this, EventArgs.Empty);
-    }
-
-    private JsonRpc Rpc => this.rpc ?? throw new InvalidOperationException("Not initialized");
-
-    private void OnInitialized(object? sender, EventArgs e)
-    {
     }
 
     public Task OnTextDocumentOpenedAsync(DidOpenTextDocumentParams messageParams)
@@ -80,12 +76,12 @@ public class LanguageServer
         PublishDiagnosticParams parameter = new()
         {
             Uri = this.textDocument.Uri,
-            Diagnostics = diagnostics.ToArray()
+            Diagnostics = [.. diagnostics],
         };
 
         if (this.Configuration.MaxNumberOfProblems > -1)
         {
-            parameter.Diagnostics = parameter.Diagnostics.Take(this.Configuration.MaxNumberOfProblems).ToArray();
+            parameter.Diagnostics = [.. parameter.Diagnostics.Take(this.Configuration.MaxNumberOfProblems)];
         }
 
         await this.Rpc.NotifyWithParameterObjectAsync(Methods.TextDocumentPublishDiagnosticsName, parameter);
@@ -99,12 +95,12 @@ public class LanguageServer
         PublishDiagnosticParams parameter = new()
         {
             Uri = new Uri(uri),
-            Diagnostics = diagnostics.ToArray()
+            Diagnostics = [.. diagnostics],
         };
 
         if (this.Configuration.MaxNumberOfProblems > -1)
         {
-            parameter.Diagnostics = parameter.Diagnostics.Take(this.Configuration.MaxNumberOfProblems).ToArray();
+            parameter.Diagnostics = [.. parameter.Diagnostics.Take(this.Configuration.MaxNumberOfProblems)];
         }
 
         return this.Rpc.NotifyWithParameterObjectAsync(Methods.TextDocumentPublishDiagnosticsName, parameter);
@@ -115,26 +111,13 @@ public class LanguageServer
         try
         {
             string configurationJson = parameter.Settings.ToString() ?? "{}";
-            var serializerOptions = new JsonSerializerOptions
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            };
-            Configuration? configuration = JsonSerializer.Deserialize<Configuration>(configurationJson, serializerOptions);
+            Configuration? configuration = JsonSerializer.Deserialize<Configuration>(configurationJson, SerializerOptions);
             this.configurationProvider.UpdateConfiguration(configuration ?? new());
         }
         catch { }
     }
 
     public void WaitForExit() => this.disconnectEvent.WaitOne();
-
-    public void Exit()
-    {
-        _ = this.disconnectEvent.Set();
-
-        Disconnected?.Invoke(this, new EventArgs());
-    }
-
-    private void OnRpcDisconnected(object? sender, JsonRpcDisconnectedEventArgs e) => this.Exit();
 
     private void OnConfigurationChanged(object? sender, ConfigurationChangedEventArgs e)
     {
@@ -156,4 +139,10 @@ public class LanguageServer
 
         _ = done.WaitOne();
     }
+
+    private void OnInitialized(object? sender, EventArgs e)
+    {
+    }
+
+    private void OnRpcDisconnected(object? sender, JsonRpcDisconnectedEventArgs e) => this.Exit();
 }

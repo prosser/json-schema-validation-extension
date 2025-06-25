@@ -119,6 +119,6 @@ public class Configuration
 
     private static bool ArrayEqual(IReadOnlyList<string>? left, IReadOnlyList<string>? right) => (left is null && right is null) || (left is not null && right is not null && left.SequenceEqual(right));
 
-    private static IReadOnlyList<string>? ToArray(string? value)
+    private static string[]? ToArray(string? value)
         => value?.Split(',', System.StringSplitOptions.RemoveEmptyEntries | System.StringSplitOptions.TrimEntries);
 }

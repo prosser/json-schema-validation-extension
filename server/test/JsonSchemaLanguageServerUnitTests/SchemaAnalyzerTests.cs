@@ -17,11 +17,18 @@ using Rosser.Extensions.JsonSchemaLanguageServer.Services;
 using Xunit;
 using Xunit.Abstractions;
 
-public class SchemaAnalyzerTests : TestBase
+public class SchemaAnalyzerTests(ITestOutputHelper output) : TestBase(output)
 {
-    public SchemaAnalyzerTests(ITestOutputHelper output)
-        : base(output)
+    private static readonly JsonSerializerOptions SerializerOptions = new()
     {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        WriteIndented = true,
+    };
+
+    public static TheoryData<TestData> GetSchemaValidationData()
+    {
+        var testContainer = TestDataContainer.Load(@"Content\schema-validation.json");
+        return [.. testContainer.Tests];
     }
 
     [Theory]
@@ -42,38 +49,16 @@ public class SchemaAnalyzerTests : TestBase
         }
     }
 
-    public static IEnumerable<object[]> GetSchemaValidationData()
-    {
-        var testContainer = TestDataContainer.Load(@"Content\schema-validation.json");
-
-        foreach (TestData testData in testContainer.Tests)
-        {
-            yield return new object[] { testData };
-        }
-    }
-
-    public class TestData
-    {
-        public string Name { get; set; }
-        public Diagnostic[] ExpectedDiagnostics { get; set; }
-        public string SchemaJson { get; set; }
-    }
-
     public class TestDataContainer
     {
         public TestData[] Tests { get; set; }
 
         public static TestDataContainer Load(string path)
         {
-            var jsonSerializerOptions = new JsonSerializerOptions
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                WriteIndented = true,
-            };
-            jsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
+            SerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
 
             string json = File.ReadAllText(path);
-            TestDataContainer container = JsonSerializer.Deserialize<TestDataContainer>(json, jsonSerializerOptions);
+            TestDataContainer container = JsonSerializer.Deserialize<TestDataContainer>(json, SerializerOptions);
 
             foreach (TestData test in container.Tests)
             {
@@ -82,6 +67,27 @@ public class SchemaAnalyzerTests : TestBase
             }
 
             return container;
+        }
+    }
+
+    public sealed record TestData : IXunitSerializable
+    {
+        public Diagnostic[] ExpectedDiagnostics { get; set; }
+        public string Name { get; set; }
+        public string SchemaJson { get; set; }
+
+        public void Serialize(IXunitSerializationInfo info)
+        {
+            info.AddValue(nameof(this.ExpectedDiagnostics), this.ExpectedDiagnostics);
+            info.AddValue(nameof(this.Name), this.Name);
+            info.AddValue(nameof(this.SchemaJson), this.SchemaJson);
+        }
+
+        public void Deserialize(IXunitSerializationInfo info)
+        {
+            this.ExpectedDiagnostics = info.GetValue<Diagnostic[]>(nameof(this.ExpectedDiagnostics));
+            this.Name = info.GetValue<string>(nameof(this.Name));
+            this.SchemaJson = info.GetValue<string>(nameof(this.SchemaJson));
         }
     }
 }

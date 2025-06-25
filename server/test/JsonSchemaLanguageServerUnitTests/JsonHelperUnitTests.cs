@@ -4,9 +4,7 @@ namespace JsonSchemaLanguageServerUnitTests;
 
 using System;
 using System.Buffers;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text;
 using System.Text.Json;
 
@@ -18,13 +16,89 @@ using Xunit;
 
 public class JsonHelperUnitTests
 {
-    [Theory]
-    [MemberData(nameof(GetElementBoundsData))]
-    public void GetElementBoundsIsAccurate(string find, long expectedStart, long expectedEnd, string json)
+    public static TheoryData<JsonTestData> GetJsonData()
     {
-        (long start, long end) = JsonHelper.GetElementBounds(json, find);
+        string json = File.ReadAllText(@"Content\ReadToJsonPointer1.json");
 
-        Assert.Equal((expectedStart, expectedEnd), (start, end));
+        return
+        [
+            new() { Path = "/stringProperty", Start = 23, End = 31, ExpectedTokenType = JsonTokenType.String, Json = json },
+            new() { Path = "/numberProperty", Start = 54, End = 57, ExpectedTokenType = JsonTokenType.Number, Json = json },
+            new() { Path = "/arrayProperty", Start = 79, End = 90, ExpectedTokenType = JsonTokenType.StartArray, Json = json },
+            new() { Path = "/arrayProperty/0", Start = 81, End = 82, ExpectedTokenType = JsonTokenType.Number, Json = json },
+            new() { Path = "/arrayProperty/1", Start = 84, End = 85, ExpectedTokenType = JsonTokenType.Number, Json = json },
+            new() { Path = "/arrayProperty/2", Start = 87, End = 88, ExpectedTokenType = JsonTokenType.Number, Json = json },
+            new() { Path = "/objectProperty", Start = 113, End = 214, ExpectedTokenType = JsonTokenType.StartObject, Json = json },
+            new() { Path = "/objectProperty/stringProperty", Start = 138, End = 146, ExpectedTokenType = JsonTokenType.String, Json = json },
+            new() { Path = "/objectProperty/numberProperty", Start = 171, End = 174, ExpectedTokenType = JsonTokenType.Number, Json = json },
+            new() { Path = "/objectProperty/arrayProperty", Start = 198, End = 209, ExpectedTokenType = JsonTokenType.StartArray, Json = json },
+            new() { Path = "/objectProperty/arrayProperty/0", Start = 200, End = 201, ExpectedTokenType = JsonTokenType.Number, Json = json },
+            new() { Path = "/objectProperty/arrayProperty/1", Start = 203, End = 204, ExpectedTokenType = JsonTokenType.Number, Json = json },
+            new() { Path = "/objectProperty/arrayProperty/2", Start = 206, End = 207, ExpectedTokenType = JsonTokenType.Number, Json = json },
+            new() { Path = "/nestedObjectProperty", Start = 243, End = 382, ExpectedTokenType = JsonTokenType.StartObject, Json = json },
+            new() { Path = "/nestedObjectProperty/objectProperty", Start = 268, End = 377, ExpectedTokenType = JsonTokenType.StartObject, Json = json },
+            new() { Path = "/nestedObjectProperty/objectProperty/stringProperty", Start = 295, End = 303, ExpectedTokenType = JsonTokenType.String, Json = json },
+            new() { Path = "/nestedObjectProperty/objectProperty/numberProperty", Start = 330, End = 333, ExpectedTokenType = JsonTokenType.Number, Json = json },
+            new() { Path = "/nestedObjectProperty/objectProperty/arrayProperty", Start = 359, End = 370, ExpectedTokenType = JsonTokenType.StartArray, Json = json },
+            new() { Path = "/nestedObjectProperty/objectProperty/arrayProperty/0", Start = 361, End = 362, ExpectedTokenType = JsonTokenType.Number, Json = json },
+            new() { Path = "/nestedObjectProperty/objectProperty/arrayProperty/1", Start = 364, End = 365, ExpectedTokenType = JsonTokenType.Number, Json = json },
+            new() { Path = "/nestedObjectProperty/objectProperty/arrayProperty/2", Start = 367, End = 368, ExpectedTokenType = JsonTokenType.Number, Json = json },
+            new() { Path = "/nestedArrayProperty", Start = 410, End = 469, ExpectedTokenType = JsonTokenType.StartArray, Json = json },
+            new() { Path = "/nestedArrayProperty/0", Start = 417, End = 428, ExpectedTokenType = JsonTokenType.StartArray, Json = json },
+            new() { Path = "/nestedArrayProperty/0/0", Start = 419, End = 420, ExpectedTokenType = JsonTokenType.Number, Json = json },
+            new() { Path = "/nestedArrayProperty/0/1", Start = 422, End = 423, ExpectedTokenType = JsonTokenType.Number, Json = json },
+            new() { Path = "/nestedArrayProperty/0/2", Start = 425, End = 426, ExpectedTokenType = JsonTokenType.Number, Json = json },
+            new() { Path = "/nestedArrayProperty/1", Start = 435, End = 446, ExpectedTokenType = JsonTokenType.StartArray, Json = json },
+            new() { Path = "/nestedArrayProperty/1/0", Start = 437, End = 438, ExpectedTokenType = JsonTokenType.Number, Json = json },
+            new() { Path = "/nestedArrayProperty/1/1", Start = 440, End = 441, ExpectedTokenType = JsonTokenType.Number, Json = json },
+            new() { Path = "/nestedArrayProperty/1/2", Start = 443, End = 444, ExpectedTokenType = JsonTokenType.Number, Json = json },
+            new() { Path = "/nestedArrayProperty/2", Start = 453, End = 464, ExpectedTokenType = JsonTokenType.StartArray, Json = json },
+            new() { Path = "/nestedArrayProperty/2/0", Start = 455, End = 456, ExpectedTokenType = JsonTokenType.Number, Json = json },
+            new() { Path = "/nestedArrayProperty/2/1", Start = 458, End = 459, ExpectedTokenType = JsonTokenType.Number, Json = json },
+            new() { Path = "/nestedArrayProperty/2/2", Start = 461, End = 462, ExpectedTokenType = JsonTokenType.Number, Json = json },
+            new() { Path = "/arrayInObjectProperty", Start = 499, End = 560, ExpectedTokenType = JsonTokenType.StartObject, Json = json },
+            new() { Path = "/arrayInObjectProperty/array1", Start = 516, End = 527, ExpectedTokenType = JsonTokenType.StartArray, Json = json },
+            new() { Path = "/arrayInObjectProperty/array1/0", Start = 518, End = 519, ExpectedTokenType = JsonTokenType.Number, Json = json },
+            new() { Path = "/arrayInObjectProperty/array1/1", Start = 521, End = 522, ExpectedTokenType = JsonTokenType.Number, Json = json },
+            new() { Path = "/arrayInObjectProperty/array1/2", Start = 524, End = 525, ExpectedTokenType = JsonTokenType.Number, Json = json },
+            new() { Path = "/arrayInObjectProperty/array2", Start = 544, End = 555, ExpectedTokenType = JsonTokenType.StartArray, Json = json },
+            new() { Path = "/arrayInObjectProperty/array2/0", Start = 546, End = 547, ExpectedTokenType = JsonTokenType.Number, Json = json },
+            new() { Path = "/arrayInObjectProperty/array2/1", Start = 549, End = 550, ExpectedTokenType = JsonTokenType.Number, Json = json },
+            new() { Path = "/arrayInObjectProperty/array2/2", Start = 552, End = 553, ExpectedTokenType = JsonTokenType.Number, Json = json },
+            new() { Path = "/arrayInObjectPropertyArray", Start = 595, End = 696, ExpectedTokenType = JsonTokenType.StartObject, Json = json },
+            new() { Path = "/arrayInObjectPropertyArray/outerArray", Start = 616, End = 691, ExpectedTokenType = JsonTokenType.StartArray, Json = json },
+            new() { Path = "/arrayInObjectPropertyArray/outerArray/0", Start = 625, End = 650, ExpectedTokenType = JsonTokenType.StartObject, Json = json },
+            new() { Path = "/arrayInObjectPropertyArray/outerArray/0/array1", Start = 637, End = 648, ExpectedTokenType = JsonTokenType.StartArray, Json = json },
+            new() { Path = "/arrayInObjectPropertyArray/outerArray/0/array1/0", Start = 639, End = 640, ExpectedTokenType = JsonTokenType.Number, Json = json },
+            new() { Path = "/arrayInObjectPropertyArray/outerArray/0/array1/1", Start = 642, End = 643, ExpectedTokenType = JsonTokenType.Number, Json = json },
+            new() { Path = "/arrayInObjectPropertyArray/outerArray/0/array1/2", Start = 645, End = 646, ExpectedTokenType = JsonTokenType.Number, Json = json },
+            new() { Path = "/arrayInObjectPropertyArray/outerArray/1", Start = 659, End = 684, ExpectedTokenType = JsonTokenType.StartObject, Json = json },
+            new() { Path = "/arrayInObjectPropertyArray/outerArray/1/array2", Start = 671, End = 682, ExpectedTokenType = JsonTokenType.StartArray, Json = json },
+            new() { Path = "/arrayInObjectPropertyArray/outerArray/1/array2/0", Start = 673, End = 674, ExpectedTokenType = JsonTokenType.Number, Json = json },
+            new() { Path = "/arrayInObjectPropertyArray/outerArray/1/array2/1", Start = 676, End = 677, ExpectedTokenType = JsonTokenType.Number, Json = json },
+            new() { Path = "/arrayInObjectPropertyArray/outerArray/1/array2/2", Start = 679, End = 680, ExpectedTokenType = JsonTokenType.Number, Json = json },
+        ];
+    }
+
+    public static TheoryData<SkipObjectOrArrayData> GetSkipObjectOrArrayData()
+    {
+        string json = File.ReadAllText(@"Content\ReadToJsonPointer1.json");
+
+        return [
+            new("nestedObjectProperty", JsonTokenType.StartObject, 244, JsonTokenType.EndObject, 382, json),
+            new("nestedArrayProperty", JsonTokenType.StartArray, 411, JsonTokenType.EndArray, 469, json),
+            new("arrayInObjectProperty", JsonTokenType.StartObject, 500, JsonTokenType.EndObject, 560, json),
+            new("arrayInObjectPropertyArray", JsonTokenType.StartObject, 596, JsonTokenType.EndObject, 696, json),
+        ];
+    }
+
+    [Theory]
+    [MemberData(nameof(GetJsonData))]
+    public void GetElementBoundsIsAccurate(JsonTestData testData)
+    {
+        (long start, long end) = JsonHelper.GetElementBounds(testData.Json, testData.Path);
+
+        Assert.Equal((testData.Start, testData.End), (start, end));
     }
 
     [Fact]
@@ -49,35 +123,35 @@ public class JsonHelperUnitTests
     }
 
     [Theory]
-    [MemberData(nameof(GetReadToJsonPointerData))]
-    public void ReadToJsonPointerIsAccurate(string find, long expectedStart, JsonTokenType expectedTokenType, string json)
+    [MemberData(nameof(GetJsonData))]
+    public void ReadToJsonPointerIsAccurate(JsonTestData testData)
     {
-        var jsonPointer = JsonPointer.Parse(find);
-        using var doc = JsonDocument.Parse(json);
-        var bytes = new ReadOnlySequence<byte>(Encoding.UTF8.GetBytes(json));
+        var jsonPointer = JsonPointer.Parse(testData.Path);
+        using var doc = JsonDocument.Parse(testData.Json);
+        var bytes = new ReadOnlySequence<byte>(Encoding.UTF8.GetBytes(testData.Json));
         var reader = new Utf8JsonReader(bytes);
         JsonHelper.ReadToJsonPointer(ref reader, jsonPointer);
 
-        Assert.Equal(expectedStart, reader.TokenStartIndex);
-        Assert.Equal(expectedTokenType, reader.TokenType);
+        Assert.Equal(testData.Start, reader.TokenStartIndex);
+        Assert.Equal(testData.ExpectedTokenType, reader.TokenType);
     }
 
     [Theory]
     [MemberData(nameof(GetSkipObjectOrArrayData))]
-    public void SkipObjectOrArraySkipsOnlyIt(string propertyName, JsonTokenType expectedPreconditionToken, int expectedPreconditionTokenOffset, JsonTokenType expectedPostconditionToken, int expectedPostconditionTokenOffset, string json)
+    public void SkipObjectOrArraySkipsOnlyIt(SkipObjectOrArrayData data) //string propertyName, JsonTokenType expectedPreconditionToken, int expectedPreconditionTokenOffset, JsonTokenType expectedPostconditionToken, int expectedPostconditionTokenOffset, string json)
     {
-        byte[] buffer = Encoding.UTF8.GetBytes(json);
+        byte[] buffer = Encoding.UTF8.GetBytes(data.Json);
         var bytes = new ReadOnlySequence<byte>(buffer);
         var reader = new Utf8JsonReader(bytes);
 
-        ReadToProperty(ref reader, propertyName);
+        ReadToProperty(ref reader, data.PropertyName);
 
-        Assert.Equal(expectedPreconditionToken, reader.TokenType);
-        Assert.Equal(expectedPreconditionTokenOffset, reader.BytesConsumed);
+        Assert.Equal(data.ExpectedPreconditionToken, reader.TokenType);
+        Assert.Equal(data.ExpectedPreconditionTokenOffset, reader.BytesConsumed);
         JsonHelper.SkipObjectOrArray(ref reader);
 
-        Assert.Equal(expectedPostconditionToken, reader.TokenType);
-        Assert.Equal(expectedPostconditionTokenOffset, reader.BytesConsumed);
+        Assert.Equal(data.ExpectedPostconditionToken, reader.TokenType);
+        Assert.Equal(data.ExpectedPostconditionTokenOffset, reader.BytesConsumed);
 
         static void ReadToProperty(ref Utf8JsonReader reader, string propertyName)
         {
@@ -98,126 +172,85 @@ public class JsonHelperUnitTests
         }
     }
 
-    public static IEnumerable<object[]> GetElementBoundsData()
+    public sealed class JsonTestData : Xunit.Abstractions.IXunitSerializable
     {
-        IEnumerable<JsonTestData> jsonData = GetJsonData();
+        public JsonTestData()
+        { }
 
-        foreach (JsonTestData item in jsonData)
-        {
-            yield return new object[] { item.Path, item.Start, item.End, item.Json };
-        }
-    }
-
-    public static IEnumerable<object[]> GetReadToJsonPointerData()
-    {
-        IEnumerable<JsonTestData> jsonData = GetJsonData();
-
-        foreach (JsonTestData item in jsonData)
-        {
-            yield return new object[] { item.Path, item.Start, item.ExpectedTokenType, item.Json };
-        }
-    }
-
-    public class JsonTestData
-    {
-        public JsonTestData(string path, long start, long end, JsonTokenType expectedTokenType)
+        public JsonTestData(string path, long start, long end, JsonTokenType expectedTokenType, string json)
         {
             this.Path = path;
             this.Start = start;
             this.End = end;
             this.ExpectedTokenType = expectedTokenType;
+            this.Json = json;
         }
 
+        public long End { get; set; }
+        public JsonTokenType ExpectedTokenType { get; set; }
         public string Json { get; set; }
-        public string Path { get; }
-        public long Start { get; }
-        public long End { get; }
-        public JsonTokenType ExpectedTokenType { get; }
-    }
+        public string Path { get; set; }
+        public long Start { get; set; }
 
-    public static IEnumerable<JsonTestData> GetJsonData()
-    {
-        string json = File.ReadAllText(@"Content\ReadToJsonPointer1.json");
-
-        var data = new JsonTestData[]
+        public void Deserialize(Xunit.Abstractions.IXunitSerializationInfo info)
         {
-            new("/stringProperty", 23, 31, JsonTokenType.String),
-            new("/numberProperty", 54, 57, JsonTokenType.Number),
-            new("/arrayProperty", 79, 90, JsonTokenType.StartArray),
-            new("/arrayProperty/0", 81, 82, JsonTokenType.Number),
-            new("/arrayProperty/1", 84, 85, JsonTokenType.Number),
-            new("/arrayProperty/2", 87, 88, JsonTokenType.Number),
-            new("/objectProperty", 113, 214, JsonTokenType.StartObject),
-            new("/objectProperty/stringProperty", 138, 146, JsonTokenType.String),
-            new("/objectProperty/numberProperty", 171, 174, JsonTokenType.Number),
-            new("/objectProperty/arrayProperty", 198, 209, JsonTokenType.StartArray),
-            new("/objectProperty/arrayProperty/0", 200, 201, JsonTokenType.Number),
-            new("/objectProperty/arrayProperty/1", 203, 204, JsonTokenType.Number),
-            new("/objectProperty/arrayProperty/2", 206, 207, JsonTokenType.Number),
-            new("/nestedObjectProperty", 243, 382, JsonTokenType.StartObject),
-            new("/nestedObjectProperty/objectProperty", 268, 377, JsonTokenType.StartObject),
-            new("/nestedObjectProperty/objectProperty/stringProperty", 295, 303, JsonTokenType.String),
-            new("/nestedObjectProperty/objectProperty/numberProperty", 330, 333, JsonTokenType.Number),
-            new("/nestedObjectProperty/objectProperty/arrayProperty", 359, 370, JsonTokenType.StartArray),
-            new("/nestedObjectProperty/objectProperty/arrayProperty/0", 361, 362, JsonTokenType.Number),
-            new("/nestedObjectProperty/objectProperty/arrayProperty/1", 364, 365, JsonTokenType.Number),
-            new("/nestedObjectProperty/objectProperty/arrayProperty/2", 367, 368, JsonTokenType.Number),
-            new("/nestedArrayProperty", 410, 469, JsonTokenType.StartArray),
-            new("/nestedArrayProperty/0", 417, 428, JsonTokenType.StartArray),
-            new("/nestedArrayProperty/0/0", 419, 420, JsonTokenType.Number),
-            new("/nestedArrayProperty/0/1", 422, 423, JsonTokenType.Number),
-            new("/nestedArrayProperty/0/2", 425, 426, JsonTokenType.Number),
-            new("/nestedArrayProperty/1", 435, 446, JsonTokenType.StartArray),
-            new("/nestedArrayProperty/1/0", 437, 438, JsonTokenType.Number),
-            new("/nestedArrayProperty/1/1", 440, 441, JsonTokenType.Number),
-            new("/nestedArrayProperty/1/2", 443, 444, JsonTokenType.Number),
-            new("/nestedArrayProperty/2", 453, 464, JsonTokenType.StartArray),
-            new("/nestedArrayProperty/2/0", 455, 456, JsonTokenType.Number),
-            new("/nestedArrayProperty/2/1", 458, 459, JsonTokenType.Number),
-            new("/nestedArrayProperty/2/2", 461, 462, JsonTokenType.Number),
-            new("/arrayInObjectProperty", 499, 560, JsonTokenType.StartObject),
-            new("/arrayInObjectProperty/array1", 516, 527, JsonTokenType.StartArray),
-            new("/arrayInObjectProperty/array1/0", 518, 519, JsonTokenType.Number),
-            new("/arrayInObjectProperty/array1/1", 521, 522, JsonTokenType.Number),
-            new("/arrayInObjectProperty/array1/2", 524, 525, JsonTokenType.Number),
-            new("/arrayInObjectProperty/array2", 544, 555, JsonTokenType.StartArray),
-            new("/arrayInObjectProperty/array2/0", 546, 547, JsonTokenType.Number),
-            new("/arrayInObjectProperty/array2/1", 549, 550, JsonTokenType.Number),
-            new("/arrayInObjectProperty/array2/2", 552, 553, JsonTokenType.Number),
-            new("/arrayInObjectPropertyArray", 595, 696, JsonTokenType.StartObject),
-            new("/arrayInObjectPropertyArray/outerArray", 616, 691, JsonTokenType.StartArray),
-            new("/arrayInObjectPropertyArray/outerArray/0", 625, 650, JsonTokenType.StartObject),
-            new("/arrayInObjectPropertyArray/outerArray/0/array1", 637, 648, JsonTokenType.StartArray),
-            new("/arrayInObjectPropertyArray/outerArray/0/array1/0", 639, 640, JsonTokenType.Number),
-            new("/arrayInObjectPropertyArray/outerArray/0/array1/1", 642, 643, JsonTokenType.Number),
-            new("/arrayInObjectPropertyArray/outerArray/0/array1/2", 645, 646, JsonTokenType.Number),
-            new("/arrayInObjectPropertyArray/outerArray/1", 659, 684, JsonTokenType.StartObject),
-            new("/arrayInObjectPropertyArray/outerArray/1/array2", 671, 682, JsonTokenType.StartArray),
-            new("/arrayInObjectPropertyArray/outerArray/1/array2/0", 673, 674, JsonTokenType.Number),
-            new("/arrayInObjectPropertyArray/outerArray/1/array2/1", 676, 677, JsonTokenType.Number),
-            new("/arrayInObjectPropertyArray/outerArray/1/array2/2", 679, 680, JsonTokenType.Number),
-        };
+            this.Path = info.GetValue<string>(nameof(this.Path));
+            this.Start = info.GetValue<long>(nameof(this.Start));
+            this.End = info.GetValue<long>(nameof(this.End));
+            this.ExpectedTokenType = info.GetValue<JsonTokenType>(nameof(this.ExpectedTokenType));
+            this.Json = info.GetValue<string>(nameof(this.Json));
+        }
 
-        foreach (JsonTestData item in data)
+        public void Serialize(Xunit.Abstractions.IXunitSerializationInfo info)
         {
-            item.Json = json;
-            yield return item;
+            info.AddValue(nameof(this.Path), this.Path);
+            info.AddValue(nameof(this.Start), this.Start);
+            info.AddValue(nameof(this.End), this.End);
+            info.AddValue(nameof(this.ExpectedTokenType), this.ExpectedTokenType);
+            info.AddValue(nameof(this.Json), this.Json);
         }
     }
 
-    public static IEnumerable<object[]> GetSkipObjectOrArrayData()
+    public sealed class SkipObjectOrArrayData : Xunit.Abstractions.IXunitSerializable
     {
-        string json = File.ReadAllText(@"Content\ReadToJsonPointer1.json");
+        public SkipObjectOrArrayData()
+        { }
 
-        object[][] data = new object[][]
+        public SkipObjectOrArrayData(string propertyName, JsonTokenType expectedPreconditionToken, int expectedPreconditionTokenOffset, JsonTokenType expectedPostconditionToken, int expectedPostconditionTokenOffset, string json)
         {
-            new object[] { "objectProperty", JsonTokenType.StartObject, 114, JsonTokenType.EndObject, 214 },
-            new object[] { "nestedObjectProperty", JsonTokenType.StartObject, 244, JsonTokenType.EndObject, 382 },
-            new object[] { "nestedArrayProperty", JsonTokenType.StartArray, 411, JsonTokenType.EndArray, 469 },
-            new object[] { "arrayInObjectProperty", JsonTokenType.StartObject, 500, JsonTokenType.EndObject, 560 },
-            new object[] { "arrayInObjectPropertyArray", JsonTokenType.StartObject, 596, JsonTokenType.EndObject, 696 },
-        };
+            this.PropertyName = propertyName;
+            this.ExpectedPreconditionToken = expectedPreconditionToken;
+            this.ExpectedPreconditionTokenOffset = expectedPreconditionTokenOffset;
+            this.ExpectedPostconditionToken = expectedPostconditionToken;
+            this.ExpectedPostconditionTokenOffset = expectedPostconditionTokenOffset;
+            this.Json = json;
+        }
 
-        return data.Select(item => new object[] { item[0], item[1], item[2], item[3], item[4], json });
+        public JsonTokenType ExpectedPostconditionToken { get; set; }
+        public int ExpectedPostconditionTokenOffset { get; set; }
+        public JsonTokenType ExpectedPreconditionToken { get; set; }
+        public int ExpectedPreconditionTokenOffset { get; set; }
+        public string Json { get; set; }
+        public string PropertyName { get; set; }
+
+        public void Deserialize(Xunit.Abstractions.IXunitSerializationInfo info)
+        {
+            this.PropertyName = info.GetValue<string>(nameof(this.PropertyName));
+            this.ExpectedPreconditionToken = info.GetValue<JsonTokenType>(nameof(this.ExpectedPreconditionToken));
+            this.ExpectedPreconditionTokenOffset = info.GetValue<int>(nameof(this.ExpectedPreconditionTokenOffset));
+            this.ExpectedPostconditionToken = info.GetValue<JsonTokenType>(nameof(this.ExpectedPostconditionToken));
+            this.ExpectedPostconditionTokenOffset = info.GetValue<int>(nameof(this.ExpectedPostconditionTokenOffset));
+            this.Json = info.GetValue<string>(nameof(this.Json));
+        }
+
+        public void Serialize(Xunit.Abstractions.IXunitSerializationInfo info)
+        {
+            info.AddValue(nameof(this.PropertyName), this.PropertyName);
+            info.AddValue(nameof(this.ExpectedPreconditionToken), this.ExpectedPreconditionToken);
+            info.AddValue(nameof(this.ExpectedPreconditionTokenOffset), this.ExpectedPreconditionTokenOffset);
+            info.AddValue(nameof(this.ExpectedPostconditionToken), this.ExpectedPostconditionToken);
+            info.AddValue(nameof(this.ExpectedPostconditionTokenOffset), this.ExpectedPostconditionTokenOffset);
+            info.AddValue(nameof(this.Json), this.Json);
+        }
     }
 }

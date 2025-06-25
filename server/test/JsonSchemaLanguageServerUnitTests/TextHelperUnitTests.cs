@@ -5,19 +5,12 @@ namespace JsonSchemaLanguageServerUnitTests;
 using System.IO;
 using System.Linq;
 using System.Text;
-
+using Rosser.Extensions.JsonSchemaLanguageServer.Text;
 using Xunit;
 using Xunit.Abstractions;
 
-public class TextHelperUnitTests
+public class TextHelperUnitTests(ITestOutputHelper output)
 {
-    private readonly ITestOutputHelper output;
-
-    public TextHelperUnitTests(ITestOutputHelper output)
-    {
-        this.output = output;
-    }
-
     [Fact]
     public void LineOffsets()
     {
@@ -43,9 +36,9 @@ public class TextHelperUnitTests
             new(lines[12], 12, 963, Encoding.UTF8.GetByteCount(lines[12]))
         };
 
-        this.output.WriteLine("Expected   : Actual");
-        this.output.WriteLine("---------- : ---------------");
-        this.output.WriteLine(string.Join('\n',
+        output.WriteLine("Expected   : Actual");
+        output.WriteLine("---------- : ---------------");
+        output.WriteLine(string.Join('\n',
             expected.Select((x, i) =>
                 $"({x.ByteOffset,3}, {x.ByteCount,3}) : ({uut[i].ByteOffset,3}, {uut[i].ByteCount,3})")));
 

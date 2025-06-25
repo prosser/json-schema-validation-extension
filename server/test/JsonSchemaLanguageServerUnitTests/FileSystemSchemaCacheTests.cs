@@ -2,25 +2,14 @@
 
 namespace JsonSchemaLanguageServerUnitTests;
 
-using System;
-using System.IO;
-using System.Linq;
-using System.Text;
-
 using Microsoft.Extensions.DependencyInjection;
-
-using Rosser.Extensions.JsonSchemaLanguageServer.Services;
 
 using Xunit;
 using Xunit.Abstractions;
 
-public class FileSystemSchemaCacheTests : TestBase
+[SuppressMessage("Performance", "CA1861:Avoid constant arrays as arguments", Justification = "Test code")]
+public class FileSystemSchemaCacheTests(ITestOutputHelper output) : TestBase(output)
 {
-    public FileSystemSchemaCacheTests(ITestOutputHelper output)
-        : base(output)
-    {
-    }
-
     [Fact]
     public void ConfigurationChangesClearCache()
     {
@@ -68,7 +57,7 @@ public class FileSystemSchemaCacheTests : TestBase
         cache.Add("urn://test", "/foo", Encoding.UTF8.GetBytes("test content"));
         cache.Add("urn://test2", "/foo2", Encoding.UTF8.GetBytes("test content2"));
 
-        string[] urls = cache.GetCachedUrls().ToArray();
+        string[] urls = [.. cache.GetCachedUrls()];
         Assert.Equal(new[] { "urn://test", "urn://test2" }, urls);
     }
 
